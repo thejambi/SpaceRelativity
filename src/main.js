@@ -1,8 +1,11 @@
 // main.js — Relativistic flight through a procedural universe.
 import * as THREE from "three";
 import {
-  C_CAP, lorentz, aberrateDir, STAR_VERT, STAR_FRAG,
+  C_CAP, lorentz, aberrateDir,
+  STAR_VERT, STAR_FRAG, GALAXY_VERT, GALAXY_FRAG,
 } from "./relativity.js";
+import { makeGalaxyAtlas } from "./textures.js";
+import { createAudio } from "./audio.js";
 
 // ---------------------------------------------------------------------------
 // Renderer / scene / camera
@@ -112,15 +115,66 @@ const nearStars = makeStarLayer({
   sizeMul: 2.4, scale: 26,
 });
 
-// distant galaxies: a sparse, dim, large-cell layer for cosmic depth
-const galaxies = makeStarLayer({
-  count: 700, cell: 900,
-  tempFn: () => 3500 + Math.random() * 4500,
-  brightFn: () => 0.12 + Math.random() * 0.4,
-  sizeMul: 9.0, scale: 60,
+// Faint background star haze for cosmic depth between the galaxies.
+const farStars = makeStarLayer({
+  count: 2600, cell: 900,
+  tempFn: () => 3200 + Math.random() * 4200,
+  brightFn: () => 0.08 + Math.random() * 0.25,
+  sizeMul: 3.5, scale: 70,
 });
 
-const layers = [nearStars, galaxies];
+// Distant galaxies & nebulae: textured sprites that share the relativistic
+// transform and get Doppler-tinted in the shader.
+const galaxyAtlas = makeGalaxyAtlas(1024);
+
+function makeGalaxyLayer({ count, cell, sizeMul, scale }) {
+  const positions = new Float32Array(count * 3);
+  const brights = new Float32Array(count);
+  const sizes = new Float32Array(count);
+  const tiles = new Float32Array(count);
+  const angles = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    positions[i * 3 + 0] = (Math.random() - 0.5) * cell;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * cell;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * cell;
+    brights[i] = 0.55 + Math.random() * 0.45;
+    // a few big showpieces, mostly modest ones
+    sizes[i] = (Math.random() < 0.12 ? 2.6 : 1.0) * (0.7 + Math.random() * 0.8);
+    tiles[i] = Math.floor(Math.random() * 4);
+    angles[i] = Math.random() * Math.PI * 2;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute("aBright", new THREE.BufferAttribute(brights, 1));
+  geo.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
+  geo.setAttribute("aTile", new THREE.BufferAttribute(tiles, 1));
+  geo.setAttribute("aAngle", new THREE.BufferAttribute(angles, 1));
+  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), cell * 4);
+
+  const uniforms = {
+    uShipPos: { value: ship.pos },
+    uForward: { value: new THREE.Vector3(0, 0, -1) },
+    uBeta: { value: 0 }, uGamma: { value: 1 },
+    uCell: { value: cell }, uSizeMul: { value: sizeMul },
+    uScale: { value: scale }, uPixelRatio: { value: renderer.getPixelRatio() },
+    uWarp: { value: 0 },
+    uFxAberration: { value: 1 }, uFxDoppler: { value: 1 }, uFxBeaming: { value: 1 },
+    uAtlas: { value: galaxyAtlas },
+  };
+  const mat = new THREE.ShaderMaterial({
+    uniforms, vertexShader: GALAXY_VERT, fragmentShader: GALAXY_FRAG,
+    transparent: true, depthWrite: false, depthTest: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const points = new THREE.Points(geo, mat);
+  points.frustumCulled = false;
+  scene.add(points);
+  return { points, uniforms };
+}
+
+const galaxies = makeGalaxyLayer({ count: 260, cell: 1100, sizeMul: 220, scale: 90 });
+
+const layers = [farStars, nearStars, galaxies];
 
 // ---------------------------------------------------------------------------
 // Named landmarks (HTML labels that obey aberration too)
@@ -164,6 +218,8 @@ function safeRequestLock() {
   } catch (_) { /* pointer lock unavailable (sandboxed iframe) — fine */ }
 }
 
+const audio = createAudio();
+
 function start() {
   if (started) return;
   started = true;
@@ -171,6 +227,8 @@ function start() {
   setTimeout(() => (titleEl.style.display = "none"), 700);
   // Make sure an embedded iframe actually grabs keyboard focus.
   try { window.focus(); } catch (_) {}
+  audio.init(); // must be created from within a user gesture
+  updateSoundIndicator();
 }
 // Start on the first interaction of ANY kind, captured before other handlers
 // so nothing can swallow it. Works even if the iframe lacked keyboard focus.
@@ -185,6 +243,8 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyR") resetShip();
   if (e.code === "KeyF") toggleFTL();
   if (e.code === "KeyC") togglePointerLock();
+  if (e.code === "KeyM") { audio.toggleMute(); updateSoundIndicator(); }
+  if (e.code === "Tab") { e.preventDefault(); cycleTarget(1); }
 });
 window.addEventListener("keyup", (e) => keys.delete(e.code));
 
@@ -230,6 +290,59 @@ function resetShip() {
 function toggleFTL() {
   ship.ftl = !ship.ftl;
   flash(ship.ftl ? 0.5 : 0.2);
+  audio.warpSweep(ship.ftl);
+}
+
+function updateSoundIndicator() {
+  const s = document.getElementById("sound-state");
+  if (s) s.textContent = audio.isMuted() ? "muted" : "on";
+}
+
+// --- trip computer: proper-time vs universe-time to reach a destination ------
+let targetIndex = 3; // default: Galactic Core
+function cycleTarget(d) {
+  targetIndex = (targetIndex + d + landmarkDefs.length) % landmarkDefs.length;
+}
+function fmtYears(y) {
+  if (!isFinite(y)) return "∞";
+  if (y >= 1e6) return (y / 1e6).toFixed(2) + " Myr";
+  if (y >= 1e3) return (y / 1e3).toFixed(2) + " kyr";
+  if (y >= 1) return y.toFixed(1) + " yr";
+  return (y * 365.25).toFixed(0) + " d";
+}
+const nav = {
+  name: () => document.getElementById("nav-name"),
+  dist: () => document.getElementById("nav-dist"),
+  uni: () => document.getElementById("nav-uni"),
+  ship: () => document.getElementById("nav-ship"),
+  note: () => document.getElementById("nav-note"),
+};
+function updateTripComputer(gamma) {
+  const tgt = landmarkDefs[targetIndex];
+  const dist = tgt.pos.distanceTo(ship.pos); // true (un-aberrated) distance, ly
+  nav.name().textContent = tgt.name.replace(/ \/.*$/, "");
+  nav.dist().textContent = dist > 1000
+    ? (dist / 1000).toFixed(2) + " kly" : dist.toFixed(1) + " ly";
+
+  const effC = ship.beta + ship.warp * 6.0; // c-multiples (warp is superluminal)
+  if (effC <= 1e-4) {
+    nav.uni().textContent = "—";
+    nav.ship().textContent = "—";
+    nav.note().textContent = "throttle up to compute ETA";
+    return;
+  }
+  const tUniverse = dist / effC; // years (c = 1 ly/yr)
+  if (ship.warp > 0.01) {
+    nav.uni().textContent = fmtYears(tUniverse);
+    nav.ship().textContent = fmtYears(tUniverse); // FTL: non-physical, no dilation
+    nav.note().textContent = "FTL — non-physical, dilation undefined";
+  } else {
+    const tShip = tUniverse / gamma; // proper time aboard
+    nav.uni().textContent = fmtYears(tUniverse);
+    nav.ship().textContent = fmtYears(tShip);
+    nav.note().textContent = `time dilation saves ${(1 - 1 / gamma) * 100 < 0.1
+      ? "<0.1" : ((1 - 1 / gamma) * 100).toFixed(1)}% aboard`;
+  }
 }
 
 // effects toggles (number keys 1-4)
@@ -367,6 +480,8 @@ function update(dt) {
 
   updateHUD(gamma);
   updateLandmarks();
+  updateTripComputer(gamma);
+  audio.update(ship.beta, Math.min(1, ship.throttle), ship.warp);
 
   // flash decay
   if (flashAmt > 0) {

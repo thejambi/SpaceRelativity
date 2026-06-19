@@ -68,6 +68,19 @@
 
   #effects { bottom: 14px; right: 14px; font-size: 11px; line-height: 1.7; text-align: right; color: var(--hud-dim); }
   #effects .on { color: var(--ok); }
+  #effects .snd { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(143,233,255,.15); color: var(--hud-dim); }
+  #effects .snd b { color: var(--hud); }
+
+  /* trip computer */
+  #nav { top: 14px; left: 50%; transform: translateX(-50%); min-width: 280px; }
+  #nav .hd { display:flex; justify-content: space-between; align-items:center; font-size: 10px; color: var(--hud-dim); letter-spacing: 1px; margin-bottom: 4px; }
+  #nav .hd .cyc { color: var(--hud); }
+  #nav .dest { font-size: 16px; color: #fff; margin-bottom: 6px; text-shadow: 0 0 8px rgba(143,233,255,.4); }
+  #nav .row { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; }
+  #nav .row .k { color: var(--hud-dim); }
+  #nav .row .v { color: var(--hud); font-variant-numeric: tabular-nums; }
+  #nav .row .v.ship { color: var(--ok); }
+  #nav .note { margin-top: 5px; font-size: 10px; color: var(--hud-dim); font-style: italic; }
 
   /* landmark labels */
   .landmark { position: absolute; transform: translate(-50%,-50%); font-size: 11px; color: #bfefff;
@@ -129,10 +142,20 @@
 
     <div id="reticle"></div>
 
+    <div id="nav" class="panel">
+      <div class="hd"><span>NAV · TRIP COMPUTER</span><span class="cyc">[Tab] cycle ▸</span></div>
+      <div class="dest" id="nav-name">Galactic Core</div>
+      <div class="row"><span class="k">distance</span><span class="v" id="nav-dist">— ly</span></div>
+      <div class="row"><span class="k">universe time</span><span class="v" id="nav-uni">—</span></div>
+      <div class="row"><span class="k">ship time</span><span class="v ship" id="nav-ship">—</span></div>
+      <div class="note" id="nav-note">throttle up to compute ETA</div>
+    </div>
+
     <div id="help" class="panel">
       <div class="title">FLIGHT CONTROLS</div>
       <b>Mouse</b> steer (drag or move) · <b>W/S</b> throttle ± · <b>Q/E</b> roll<br/>
       <b>Shift</b> fine thrust · <b>Space</b> full stop · <b>F</b> engage FTL warp<br/>
+      <b>Tab</b> cycle destination · <b>M</b> mute · <b>1–4</b> toggle effects<br/>
       <b>R</b> reset · <b>H</b> hide UI · <b>C</b> release/lock mouse
     </div>
 
@@ -142,6 +165,7 @@
       <div id="fx-doppler">doppler shift</div>
       <div id="fx-beam">beaming</div>
       <div id="fx-contract">length contraction</div>
+      <div class="snd">sound <b id="sound-state">on</b> · <b>M</b> mute</div>
     </div>
 
     <div id="labels"></div>

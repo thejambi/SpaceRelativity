@@ -150,3 +150,93 @@ export const STAR_FRAG = /* glsl */ `
     gl_FragColor = vec4(col, core * vAlpha);
   }
 `;
+
+// ----------------------------------------------------------------------------
+// Galaxy / nebula layer: same relativistic transform, but each point samples a
+// rotated tile from a procedural atlas and is tinted by its Doppler factor.
+// ----------------------------------------------------------------------------
+
+export const GALAXY_VERT = /* glsl */ `
+  precision highp float;
+
+  uniform vec3  uShipPos;
+  uniform vec3  uForward;
+  uniform float uBeta;
+  uniform float uGamma;
+  uniform float uCell;
+  uniform float uSizeMul;
+  uniform float uScale;
+  uniform float uPixelRatio;
+  uniform float uWarp;
+  uniform float uFxAberration;
+  uniform float uFxDoppler;
+  uniform float uFxBeaming;
+
+  attribute float aBright;
+  attribute float aSize;
+  attribute float aTile;   // which atlas cell (0..3)
+  attribute float aAngle;  // sprite rotation
+
+  varying float vTile;
+  varying float vAngle;
+  varying vec3  vTint;
+  varying float vAlpha;
+
+  void main() {
+    vec3 p = position - uShipPos;
+    p = p - uCell * floor(p / uCell + 0.5);
+    float dist = length(p);
+    vec3 dir = p / max(dist, 1e-4);
+    float mu = dot(dir, uForward);
+
+    float beta = mix(0.0, uBeta, uFxAberration);
+    float mup = (mu + beta) / (1.0 + beta * mu);
+    vec3 perp = dir - mu * uForward;
+    float perpLen = length(perp);
+    vec3 dirp = uForward;
+    if (perpLen > 1e-6) {
+      dirp = mup * uForward + sqrt(max(0.0, 1.0 - mup * mup)) * (perp / perpLen);
+    }
+    if (uWarp > 0.0) dirp = normalize(mix(dirp, uForward, clamp(uWarp * 0.55, 0.0, 0.95)));
+
+    vec3 apparent = uShipPos + dirp * dist;
+    gl_Position = projectionMatrix * viewMatrix * vec4(apparent, 1.0);
+
+    float D = max(uGamma * (1.0 + uBeta * mu), 0.02);
+    // Doppler tint: blueshift -> cooler/blue, redshift -> warmer/red.
+    vec3 tint = vec3(pow(D, -0.6), 1.0, pow(D, 0.6));
+    vTint = mix(vec3(1.0), clamp(tint, 0.25, 2.5), uFxDoppler);
+
+    float beam = mix(1.0, pow(D, 3.0), uFxBeaming);
+    float fade = smoothstep(uCell * 0.5, uCell * 0.1, dist);
+    vAlpha = clamp(aBright * fade * (0.4 + 0.6 * beam), 0.0, 1.0);
+
+    vTile = aTile;
+    vAngle = aAngle;
+
+    float sz = aSize * uSizeMul * (uScale / max(dist, 1.0));
+    gl_PointSize = clamp(sz * uPixelRatio, 1.0, 512.0);
+  }
+`;
+
+export const GALAXY_FRAG = /* glsl */ `
+  precision highp float;
+  uniform sampler2D uAtlas;
+  varying float vTile;
+  varying float vAngle;
+  varying vec3  vTint;
+  varying float vAlpha;
+  void main() {
+    // rotate the sprite coordinate around its center
+    vec2 uv = gl_PointCoord - 0.5;
+    float c = cos(vAngle), s = sin(vAngle);
+    uv = mat2(c, -s, s, c) * uv + 0.5;
+    uv = clamp(uv, 0.0, 1.0);
+    // map into the 2x2 atlas cell
+    float tx = mod(vTile, 2.0);
+    float ty = floor(vTile / 2.0);
+    vec2 atlasUv = (vec2(tx, ty) + uv) * 0.5;
+    vec3 tex = texture2D(uAtlas, atlasUv).rgb;
+    gl_FragColor = vec4(tex * vTint, vAlpha);
+  }
+`;
