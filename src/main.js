@@ -100,7 +100,6 @@ function makeStarLayer({ count, cell, tempFn, brightFn, sizeMul, scale }) {
     uScale: { value: scale },
     uPixelRatio: { value: renderer.getPixelRatio() },
     uWarp: { value: 0 },
-    uBrightness: { value: 1 },
     uFxAberration: { value: 1 },
     uFxDoppler: { value: 1 },
     uFxBeaming: { value: 1 },
@@ -184,7 +183,7 @@ function makeGalaxyLayer({ count, cell, sizeMul, scale }) {
     uBeta: { value: 0 }, uGamma: { value: 1 },
     uCell: { value: cell }, uSizeMul: { value: sizeMul },
     uScale: { value: scale }, uPixelRatio: { value: renderer.getPixelRatio() },
-    uWarp: { value: 0 }, uBrightness: { value: 1 },
+    uWarp: { value: 0 },
     uFxAberration: { value: 1 }, uFxDoppler: { value: 1 }, uFxBeaming: { value: 1 },
     uAtlas: { value: galaxyAtlas },
   };
@@ -205,14 +204,17 @@ const layers = [farStars, nearStars, galaxies];
 const starLayers = [farStars, nearStars];
 
 // --- Field settings: star density & brightness ------------------------------
-const fieldSettings = { density: 0.5, brightness: 1.0 };
+// Brightness drives the tone-mapping exposure (scales the whole image before
+// the ACES curve) — far more responsive than scaling each star's alpha, which
+// the tone-map shoulder mostly undid.
+const fieldSettings = { density: 0.5, brightness: 0.85 };
 function applyDensity(d) {
   fieldSettings.density = d;
   for (const l of starLayers) l.setDensity(d);
 }
 function applyBrightness(b) {
   fieldSettings.brightness = b;
-  for (const l of layers) l.uniforms.uBrightness.value = b;
+  renderer.toneMappingExposure = b;
 }
 applyDensity(fieldSettings.density);
 applyBrightness(fieldSettings.brightness);
