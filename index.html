@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Relativistic Flight — Fly the Universe Near Light Speed</title>
+<style>
+  :root {
+    --hud: #8fe9ff;
+    --hud-dim: #5a8fa0;
+    --warn: #ff6a5a;
+    --ok: #8dff9e;
+    --bg: #000308;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  body {
+    font-family: "SFMono-Regular", ui-monospace, "Menlo", "Consolas", monospace;
+    color: var(--hud);
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: crosshair;
+  }
+  canvas { display: block; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+  .panel {
+    position: absolute;
+    background: linear-gradient(180deg, rgba(8,20,28,.72), rgba(4,10,16,.62));
+    border: 1px solid rgba(143,233,255,.25);
+    border-radius: 8px;
+    padding: 10px 12px;
+    backdrop-filter: blur(3px);
+    text-shadow: 0 0 6px rgba(143,233,255,.35);
+  }
+
+  #stats { top: 14px; left: 14px; min-width: 230px; }
+  #stats .row { display: flex; justify-content: space-between; gap: 18px; line-height: 1.55; font-size: 13px; }
+  #stats .row .k { color: var(--hud-dim); }
+  #stats .row .v { color: var(--hud); font-variant-numeric: tabular-nums; }
+  #stats .big { font-size: 22px; letter-spacing: .5px; }
+  #stats .big .v { color: #fff; }
+  #stats hr { border: none; border-top: 1px solid rgba(143,233,255,.15); margin: 7px 0; }
+  .ftl .v { color: var(--warn) !important; text-shadow: 0 0 8px rgba(255,106,90,.6); }
+
+  /* throttle bar */
+  #throttleWrap { top: 14px; right: 14px; width: 56px; height: 260px; display: flex; flex-direction: column; align-items: center; }
+  #throttleWrap .label { font-size: 10px; color: var(--hud-dim); margin-bottom: 6px; letter-spacing: 1px; }
+  #throttleBar { position: relative; flex: 1; width: 18px; border: 1px solid rgba(143,233,255,.3); border-radius: 9px; overflow: hidden; background: rgba(0,0,0,.4); }
+  #throttleFill { position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
+    background: linear-gradient(0deg, #1b6f8a, #5fe6ff); transition: height .05s linear; }
+  #throttleMark { position: absolute; left: -4px; right: -4px; height: 1px; background: var(--warn); bottom: 76.9%; }
+  #throttleWrap .pct { font-size: 11px; margin-top: 6px; color: var(--hud); }
+
+  /* compass / reticle */
+  #reticle { position: absolute; top: 50%; left: 50%; width: 42px; height: 42px; transform: translate(-50%,-50%); opacity: .5; }
+  #reticle::before, #reticle::after { content:""; position:absolute; background: rgba(143,233,255,.55); }
+  #reticle::before { left:50%; top:0; width:1px; height:100%; transform:translateX(-.5px); }
+  #reticle::after  { top:50%; left:0; height:1px; width:100%; transform:translateY(-.5px); }
+
+  /* help */
+  #help { bottom: 14px; left: 14px; font-size: 12px; line-height: 1.7; max-width: 360px; color: var(--hud-dim); }
+  #help b { color: var(--hud); }
+  #help .title { color: #fff; font-size: 13px; margin-bottom: 4px; }
+  #help kbd { display:inline-block; min-width: 16px; text-align:center; padding: 0 5px; border:1px solid rgba(143,233,255,.3); border-radius:4px; color: var(--hud); background: rgba(143,233,255,.06); }
+
+  #effects { bottom: 14px; right: 14px; font-size: 11px; line-height: 1.7; text-align: right; color: var(--hud-dim); }
+  #effects .on { color: var(--ok); }
+
+  /* landmark labels */
+  .landmark { position: absolute; transform: translate(-50%,-50%); font-size: 11px; color: #bfefff;
+    text-shadow: 0 0 6px rgba(0,0,0,.9); white-space: nowrap; pointer-events: none; }
+  .landmark .dot { display:inline-block; width:5px; height:5px; border-radius:50%; background:#bfefff; margin-right:5px; vertical-align: middle; box-shadow: 0 0 6px #bfefff; }
+  .landmark .d { color: var(--hud-dim); font-size:10px; margin-left:6px; }
+
+  #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }
+
+  #title {
+    position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(4,12,20,.4), rgba(0,2,6,.92));
+    transition: opacity .6s ease;
+  }
+  #title .card { text-align: center; max-width: 560px; padding: 28px; }
+  #title h1 { color: #fff; font-size: 30px; margin: 0 0 6px; letter-spacing: 1px; text-shadow: 0 0 24px rgba(143,233,255,.4); }
+  #title p { color: var(--hud-dim); font-size: 13px; line-height: 1.8; }
+  #title .go { margin-top: 18px; color: var(--hud); font-size: 14px; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+  #title.hidden { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+  <div id="title">
+    <div class="card">
+      <h1>RELATIVISTIC FLIGHT</h1>
+      <p>Fly through the galaxy at a fraction of light speed and watch the universe distort —
+         aberration crowds the stars ahead, Doppler shifting bleeds them blue, and your
+         clock falls behind the rest of the cosmos.</p>
+      <p style="margin-top:14px">
+        <b style="color:#bfefff">Mouse</b> steer &nbsp;·&nbsp;
+        <b style="color:#bfefff">W / S</b> throttle &nbsp;·&nbsp;
+        <b style="color:#bfefff">Q / E</b> roll &nbsp;·&nbsp;
+        <b style="color:#bfefff">Space</b> full stop
+      </p>
+      <div class="go">▶ click or press any key to engage</div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="stats" class="panel">
+      <div class="row big"><span class="k">SPEED</span><span class="v" id="s-pct">0.000 %c</span></div>
+      <div class="row"><span class="k">β (v/c)</span><span class="v" id="s-beta">0.000000</span></div>
+      <div class="row"><span class="k">γ Lorentz</span><span class="v" id="s-gamma">1.0000</span></div>
+      <hr/>
+      <div class="row"><span class="k">ship clock</span><span class="v" id="s-ptime">0.0 yr</span></div>
+      <div class="row"><span class="k">universe clock</span><span class="v" id="s-ctime">0.0 yr</span></div>
+      <div class="row"><span class="k">time dilation</span><span class="v" id="s-dilation">1.00×</span></div>
+      <hr/>
+      <div class="row"><span class="k">distance flown</span><span class="v" id="s-dist">0.0 ly</span></div>
+      <div class="row"><span class="k">heading</span><span class="v" id="s-head">+x</span></div>
+    </div>
+
+    <div id="throttleWrap" class="panel">
+      <div class="label">THRUST</div>
+      <div id="throttleBar"><div id="throttleFill"></div><div id="throttleMark" title="c"></div></div>
+      <div class="pct" id="throttlePct">0%</div>
+    </div>
+
+    <div id="reticle"></div>
+
+    <div id="help" class="panel">
+      <div class="title">FLIGHT CONTROLS</div>
+      <b>Mouse</b> steer (drag or move) · <b>W/S</b> throttle ± · <b>Q/E</b> roll<br/>
+      <b>Shift</b> fine thrust · <b>Space</b> full stop · <b>F</b> engage FTL warp<br/>
+      <b>R</b> reset · <b>H</b> hide UI · <b>C</b> release/lock mouse
+    </div>
+
+    <div id="effects" class="panel">
+      <div>relativistic effects</div>
+      <div id="fx-aberr">aberration</div>
+      <div id="fx-doppler">doppler shift</div>
+      <div id="fx-beam">beaming</div>
+      <div id="fx-contract">length contraction</div>
+    </div>
+
+    <div id="labels"></div>
+  </div>
+
+  <div id="flash"></div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
