@@ -127,7 +127,9 @@ export const STAR_VERT = /* glsl */ `
 
     // distance fade keeps the endless field from looking like a solid wall
     float fade = smoothstep(uCell * 0.5, uCell * 0.12, dist);
-    vAlpha = clamp(aBright * fade * beam, 0.0, 1.0);
+    // Forward beaming saturates to brilliant blue-white; the floor keeps
+    // rearward, redshifted stars visible as dim red points instead of black.
+    vAlpha = clamp(aBright * fade * (0.12 + 0.88 * beam), 0.0, 1.0);
     if (uWarp > 0.0) vAlpha = min(1.0, vAlpha + uWarp * 0.15 * fade);
 
     float sz = aSize * uSizeMul * (uScale / max(dist, 1.0)) * (0.6 + 0.4 * sqrt(beam));

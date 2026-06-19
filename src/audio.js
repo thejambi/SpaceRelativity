@@ -72,22 +72,24 @@ export function createAudio() {
     master.gain.setTargetAtTime(muted ? 0 : 0.28, ctx.currentTime, 0.4);
   }
 
-  function update(beta, throttle, warp) {
+  function update(beta, throttle, warp, accel = 0) {
     if (!started || !ctx) return;
     const t = ctx.currentTime;
     const sp = Math.min(1, beta);
-    // engine pitch climbs with speed; gain follows throttle
+    const g = Math.min(1, accel); // felt-acceleration intensity 0..1
+    // engine pitch climbs with speed; gain follows throttle, surges under thrust
     const f = 48 + sp * 180 + warp * 120;
     osc1.frequency.setTargetAtTime(f, t, 0.15);
     osc2.frequency.setTargetAtTime(f * 1.006, t, 0.15);
-    lp.frequency.setTargetAtTime(180 + sp * 2200 + warp * 1800, t, 0.2);
-    engineGain.gain.setTargetAtTime(0.04 + throttle * 0.13, t, 0.2);
+    lp.frequency.setTargetAtTime(180 + sp * 2200 + warp * 1800 + g * 900, t, 0.12);
+    engineGain.gain.setTargetAtTime(0.04 + throttle * 0.13 + g * 0.06, t, 0.1);
 
-    subOsc._gain.gain.setTargetAtTime(0.05 + sp * 0.16, t, 0.3);
+    subOsc._gain.gain.setTargetAtTime(0.05 + sp * 0.16 + g * 0.12, t, 0.15);
     subOsc.frequency.setTargetAtTime(30 + sp * 22, t, 0.3);
 
+    // slipstream rushes harder during hard burns (thrust rumble)
     noiseFilter.frequency.setTargetAtTime(300 + sp * 3500, t, 0.25);
-    noiseGain.gain.setTargetAtTime(sp * sp * 0.10 + warp * 0.06, t, 0.25);
+    noiseGain.gain.setTargetAtTime(sp * sp * 0.10 + warp * 0.06 + g * 0.08, t, 0.12);
   }
 
   // descending->ascending sweep on warp engage

@@ -28,7 +28,9 @@ Then open <http://localhost:8080>.
 | **Shift** | fine thrust |
 | **Space** | full stop |
 | **F** | engage / disengage FTL warp |
-| **1–4** | toggle individual effects |
+| **B** (hold) | look astern — swing the view 180° to see the redshift |
+| **Tab** | cycle trip-computer destination |
+| **M** | mute sound · **1–4** toggle individual effects |
 | **R** | reset · **H** hide UI · **C** lock/release mouse |
 
 Throttle uses a cubic curve so the top of the bar gives you fine control in the
@@ -52,10 +54,24 @@ modeled as always thrusting along its nose (velocity ∥ view direction). `β = 
   falling behind the universe clock as `γ` climbs.
 - **Length contraction** — the forward view compresses by `1/γ` as the universe
   flattens along your direction of travel.
+- **G-force** — the HUD's *thrust* readout shows proper acceleration,
+  `a = γ³·dv/dt`, the force a pilot would actually feel. It diverges as you push
+  toward `c` (why light speed is unreachable), pegging at 99 g. A camera buffet,
+  FOV punch and tunnel-vision veil sell the surge; coasting at constant speed is
+  weightless (0 g), as it should be.
 
 Most of this happens per-star in a GLSL shader (`src/relativity.js`) so thousands
 of stars transform every frame. The named landmark labels run the same aberration
 math in JS so they track their stars.
+
+**Look astern** (hold **B**) swings the *view* 180° without changing your
+velocity, so the rear hemisphere — redshifted, and starved of light by beaming —
+swings into frame: dim, sparse, and deep red, the exact opposite of the brilliant
+blue crowding ahead.
+
+The **trip computer** turns the abstract physics into a gut-punch: pick a
+destination and it reports the journey in universe time (`d/βc`) versus the proper
+time you'd age aboard (`÷γ`) — e.g. *215 ly in 79 days of ship time* near `c`.
 
 ### Faster than light
 

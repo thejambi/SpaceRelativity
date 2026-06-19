@@ -90,6 +90,17 @@
 
   #flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }
 
+  /* g-force tunnel-vision veil — edges darken (and redden) under heavy thrust */
+  #gveil { position: fixed; inset: 0; pointer-events: none; z-index: 4; opacity: 0;
+    background: radial-gradient(ellipse 70% 70% at center,
+      rgba(0,0,0,0) 35%, rgba(20,0,0,.55) 72%, rgba(0,0,0,.95) 100%); }
+
+  /* astern-view indicator */
+  #viewmode { position: absolute; top: calc(50% + 40px); left: 50%; transform: translateX(-50%);
+    font-size: 12px; letter-spacing: 3px; color: var(--warn); opacity: 0;
+    text-shadow: 0 0 10px rgba(255,106,90,.6); transition: opacity .2s; }
+  #viewmode.on { opacity: .9; }
+
   #title {
     position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
     background: radial-gradient(ellipse at center, rgba(4,12,20,.4), rgba(0,2,6,.92));
@@ -125,6 +136,7 @@
       <div class="row big"><span class="k">SPEED</span><span class="v" id="s-pct">0.000 %c</span></div>
       <div class="row"><span class="k">β (v/c)</span><span class="v" id="s-beta">0.000000</span></div>
       <div class="row"><span class="k">γ Lorentz</span><span class="v" id="s-gamma">1.0000</span></div>
+      <div class="row"><span class="k">thrust</span><span class="v" id="s-gforce">0.0 g</span></div>
       <hr/>
       <div class="row"><span class="k">ship clock</span><span class="v" id="s-ptime">0.0 yr</span></div>
       <div class="row"><span class="k">universe clock</span><span class="v" id="s-ctime">0.0 yr</span></div>
@@ -141,6 +153,7 @@
     </div>
 
     <div id="reticle"></div>
+    <div id="viewmode">◂ LOOKING ASTERN ▸</div>
 
     <div id="nav" class="panel">
       <div class="hd"><span>NAV · TRIP COMPUTER</span><span class="cyc">[Tab] cycle ▸</span></div>
@@ -155,7 +168,7 @@
       <div class="title">FLIGHT CONTROLS</div>
       <b>Mouse</b> steer (drag or move) · <b>W/S</b> throttle ± · <b>Q/E</b> roll<br/>
       <b>Shift</b> fine thrust · <b>Space</b> full stop · <b>F</b> engage FTL warp<br/>
-      <b>Tab</b> cycle destination · <b>M</b> mute · <b>1–4</b> toggle effects<br/>
+      <b>B</b> (hold) look astern · <b>Tab</b> cycle dest · <b>M</b> mute · <b>1–4</b> effects<br/>
       <b>R</b> reset · <b>H</b> hide UI · <b>C</b> release/lock mouse
     </div>
 
@@ -171,6 +184,7 @@
     <div id="labels"></div>
   </div>
 
+  <div id="gveil"></div>
   <div id="flash"></div>
 
   <script type="importmap">

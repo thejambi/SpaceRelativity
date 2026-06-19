@@ -207,6 +207,10 @@ let pointerLocked = false;
 let uiHidden = false;
 let started = false;
 
+// view + felt-dynamics state
+const view = { lookYaw: 0 };               // 0 = forward, ±π = astern (eased)
+const dyn = { prevBeta: 0, gForce: 0, shake: 0, fovKick: 0, veil: 0 }; // felt acceleration
+
 const titleEl = document.getElementById("title");
 
 // Pointer Lock is a nice-to-have for desktop, but it's blocked in sandboxed
@@ -286,6 +290,7 @@ function resetShip() {
   ship.shipTime = 0;
   ship.coordTime = 0;
   ship.distance = 0;
+  dyn.prevBeta = 0; dyn.gForce = 0; dyn.shake = 0; dyn.fovKick = 0;
 }
 function toggleFTL() {
   ship.ftl = !ship.ftl;
@@ -359,7 +364,7 @@ window.addEventListener("keydown", (e) => {
 // ---------------------------------------------------------------------------
 const el = (id) => document.getElementById(id);
 const hud = {
-  pct: el("s-pct"), beta: el("s-beta"), gamma: el("s-gamma"),
+  pct: el("s-pct"), beta: el("s-beta"), gamma: el("s-gamma"), gforce: el("s-gforce"),
   ptime: el("s-ptime"), ctime: el("s-ctime"), dilation: el("s-dilation"),
   dist: el("s-dist"), head: el("s-head"),
   throttleFill: el("throttleFill"), throttlePct: el("throttlePct"),
@@ -369,6 +374,8 @@ const hud = {
 };
 
 const flashEl = document.getElementById("flash");
+const gveilEl = document.getElementById("gveil");
+const viewmodeEl = document.getElementById("viewmode");
 let flashAmt = 0;
 function flash(a) { flashAmt = Math.max(flashAmt, a); }
 
@@ -468,20 +475,64 @@ function update(dt) {
     u.uFxBeaming.value = fx.beaming;
   }
 
+  // --- felt acceleration (G-force) ---
+  // Coordinate accel (bounded by throttle) drives the *visuals*; proper accel
+  // gamma^3*dv/dt — what a pilot truly feels, diverging near c — drives the
+  // displayed G number. Keeping them separate means the teaching-moment huge-G
+  // readout doesn't black the screen out during the long approach to c.
+  const coordAccel = (ship.beta - dyn.prevBeta) / Math.max(dt, 1e-4);
+  dyn.prevBeta = ship.beta;
+  const properAccel = coordAccel * Math.pow(gamma, 3);
+  const surge = THREE.MathUtils.clamp(Math.abs(coordAccel) / 2.2, 0, 1); // 0..1
+
+  const targetG = Math.min(99, Math.abs(properAccel) * 1.6);
+  dyn.gForce += (targetG - dyn.gForce) * Math.min(1, dt * 6);
+
+  // camera buffet: thrust surge + a gentle high-speed interstellar buffet
+  const targetShake = Math.min(0.016, surge * 0.012 +
+                                       ship.beta * ship.beta * 0.0012 + ship.warp * 0.004);
+  dyn.shake += (targetShake - dyn.shake) * Math.min(1, dt * 8);
+  // FOV punch: accelerating widens the view (surge forward), braking narrows it
+  const targetKick = THREE.MathUtils.clamp(coordAccel * 4.0, -6, 8);
+  dyn.fovKick += (targetKick - dyn.fovKick) * Math.min(1, dt * 5);
+  // tunnel-vision veil — a vignette, never a full blackout
+  dyn.veil = Math.min(0.5, surge * 0.5 + Math.pow(ship.beta, 6) * 0.12);
+
+  // --- look astern (hold B): swing the *view* 180°, velocity unchanged, so the
+  // redshifted, beaming-starved rear hemisphere swings into frame ---
+  const targetYaw = keys.has("KeyB") ? Math.PI : 0;
+  view.lookYaw += (targetYaw - view.lookYaw) * Math.min(1, dt * 5);
+
   // --- camera follows ship ---
   camera.position.copy(ship.pos);
   camera.quaternion.copy(ship.quat);
+  if (view.lookYaw > 0.001) {
+    _q.setFromAxisAngle(_up.set(0, 1, 0), view.lookYaw);
+    camera.quaternion.multiply(_q);
+  }
+  // buffet jitter
+  if (dyn.shake > 1e-5) {
+    _q.setFromAxisAngle(
+      _dir.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(),
+      dyn.shake * (Math.random() - 0.5) * 2);
+    camera.quaternion.multiply(_q);
+  }
   // length contraction along the line of sight: squeeze FOV slightly so the
   // forward view "compresses" as the universe flattens in the motion direction.
   const baseFov = 72;
   const contraction = fx.contraction ? 1 / gamma : 1;
-  camera.fov = baseFov * (0.7 + 0.3 * contraction) - ship.warp * 8;
+  camera.fov = baseFov * (0.7 + 0.3 * contraction) - ship.warp * 8 + dyn.fovKick;
   camera.updateProjectionMatrix();
 
   updateHUD(gamma);
   updateLandmarks();
   updateTripComputer(gamma);
-  audio.update(ship.beta, Math.min(1, ship.throttle), ship.warp);
+  audio.update(ship.beta, Math.min(1, ship.throttle), ship.warp, surge);
+
+  // g-force tunnel-vision veil
+  gveilEl.style.opacity = dyn.veil.toFixed(3);
+  // astern-view indicator
+  viewmodeEl.classList.toggle("on", view.lookYaw > 0.4);
 
   // flash decay
   if (flashAmt > 0) {
@@ -502,6 +553,8 @@ function updateHUD(gamma) {
   }
   hud.beta.textContent = ship.beta.toFixed(ship.beta > 0.999 ? 7 : 6);
   hud.gamma.textContent = gamma > 1000 ? gamma.toExponential(2) : fmt(gamma, 4);
+  hud.gforce.textContent = (dyn.gForce >= 99 ? "99+" : fmt(dyn.gForce, 1)) + " g";
+  hud.gforce.style.color = dyn.gForce > 9 ? "var(--warn)" : "var(--hud)";
   hud.ptime.textContent = fmt(ship.shipTime, 2) + " yr";
   hud.ctime.textContent = fmt(ship.coordTime, 2) + " yr";
   hud.dilation.textContent = (gamma > 1000 ? gamma.toExponential(2) : fmt(gamma, 2)) + "×";
