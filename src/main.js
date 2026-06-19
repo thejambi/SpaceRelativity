@@ -2,7 +2,6 @@
 import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import {
   C_CAP, lorentz, aberrateDir,
@@ -27,17 +26,11 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 100000);
 
-// Bloom post-processing — bright beamed stars and the CMB hotspot get proper
-// cinematic glare instead of being drawn as fat soft discs.
+// Post-processing chain. Bloom was removed (it squared off the bright hotspot);
+// the OutputPass is kept so ACES tone mapping applies to the custom-shader
+// layers and rolls off the forward hotspot instead of clipping to flat white.
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloomPass = new UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.06,  // strength (barely-there glow — toggle with G to compare against none)
-  0.25, // radius
-  0.8   // threshold (only brighter-than-this pixels bloom)
-);
-composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
 
 // ---------------------------------------------------------------------------
@@ -293,28 +286,65 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyF") toggleFTL();
   if (e.code === "KeyC") togglePointerLock();
   if (e.code === "KeyM") { audio.toggleMute(); updateSoundIndicator(); }
-  if (e.code === "KeyG") { bloomPass.enabled = !bloomPass.enabled; showToast("glow " + (bloomPass.enabled ? "on" : "off")); }
   if (e.code === "KeyV") cycleSpeedPreset();
   if (e.code === "Tab") { e.preventDefault(); cycleTarget(1); }
 });
 window.addEventListener("keyup", (e) => keys.delete(e.code));
 
-// Mouse steering — works as a plain click-drag (no pointer lock required).
-let dragging = false;
-renderer.domElement.addEventListener("mousedown", () => {
-  if (!started) { start(); return; }
-  dragging = true;
+// Steering — drag the field (mouse or touch) to pan, or use pointer-lock
+// mouse-look. A tap (negligible movement) toggles the HUD panels.
+let dragging = false, dragId = null, lastX = 0, lastY = 0, dragMoved = 0, dragJustStarted = false;
+renderer.domElement.addEventListener("pointerdown", (e) => {
+  const wasStarted = started;
+  if (!started) start();
+  dragging = true; dragId = e.pointerId;
+  lastX = e.clientX; lastY = e.clientY; dragMoved = 0;
+  dragJustStarted = !wasStarted;
 });
-window.addEventListener("mouseup", () => (dragging = false));
-window.addEventListener("mousemove", (e) => {
+window.addEventListener("pointermove", (e) => {
   if (!started) return;
-  const active = pointerLocked || dragging;
-  if (!active) return;
-  const dx = e.movementX || 0;
-  const dy = e.movementY || 0;
-  input.yaw -= dx * 0.0018;
-  input.pitch -= dy * 0.0018;
+  let dx, dy;
+  if (pointerLocked) {
+    dx = e.movementX || 0; dy = e.movementY || 0;
+  } else {
+    if (!dragging || e.pointerId !== dragId) return;
+    dx = e.clientX - lastX; dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+  }
+  input.yaw -= dx * 0.0016;
+  input.pitch -= dy * 0.0016;
+  dragMoved += Math.abs(dx) + Math.abs(dy);
 });
+window.addEventListener("pointerup", (e) => {
+  if (dragging && e.pointerId === dragId && !dragJustStarted && dragMoved < 9) toggleUI();
+  if (e.pointerId === dragId) { dragging = false; dragId = null; }
+});
+
+// Throttle slider — drag the thrust bar (mouse or touch) to set speed directly.
+const throttleBarEl = document.getElementById("throttleBar");
+let throttleDrag = false;
+function setThrottleFromPointer(clientY) {
+  const r = throttleBarEl.getBoundingClientRect();
+  ship.throttle = Math.max(0, Math.min(ship.ftl ? 1.6 : 1, 1 - (clientY - r.top) / r.height));
+}
+throttleBarEl.addEventListener("pointerdown", (e) => {
+  if (!started) start();
+  throttleDrag = true;
+  try { throttleBarEl.setPointerCapture(e.pointerId); } catch (_) {}
+  setThrottleFromPointer(e.clientY);
+  e.preventDefault();
+});
+throttleBarEl.addEventListener("pointermove", (e) => { if (throttleDrag) setThrottleFromPointer(e.clientY); });
+throttleBarEl.addEventListener("pointerup", () => { throttleDrag = false; });
+
+// Tap the effect rows to toggle each relativistic effect (1–4 still work too).
+const fxRows = { aberration: "fx-aberr", doppler: "fx-doppler", beaming: "fx-beam", contraction: "fx-contract" };
+for (const [k, id] of Object.entries(fxRows)) {
+  document.getElementById(id).addEventListener("click", () => { fx[k] ^= 1; });
+}
+document.querySelector("#effects .snd").addEventListener("click", () => { audio.toggleMute(); updateSoundIndicator(); });
+// Tap the NAV panel to cycle the trip-computer destination.
+document.getElementById("nav").addEventListener("click", () => cycleTarget(1));
 document.addEventListener("pointerlockchange", () => {
   pointerLocked = document.pointerLockElement === renderer.domElement;
 });
@@ -654,8 +684,11 @@ function updateHUD(gamma) {
 }
 
 function updateLandmarks() {
-  const gamma = lorentz(ship.beta);
+  // Labels bunch together and clutter the view as aberration crowds everything
+  // forward, so fade them out approaching light speed (gone by ~0.97c).
+  const labelFade = 1 - THREE.MathUtils.smoothstep(ship.beta, 0.9, 0.97);
   for (const lm of landmarkDefs) {
+    if (labelFade <= 0.001) { lm.el.style.display = "none"; continue; }
     _dir.copy(lm.pos).sub(ship.pos);
     const dist = _dir.length();
     if (dist < 1e-3) { lm.el.style.display = "none"; continue; }
@@ -671,6 +704,7 @@ function updateLandmarks() {
     const x = (_proj.x * 0.5 + 0.5) * window.innerWidth;
     const y = (-_proj.y * 0.5 + 0.5) * window.innerHeight;
     lm.el.style.display = "block";
+    lm.el.style.opacity = labelFade.toFixed(3);
     lm.el.style.left = x + "px";
     lm.el.style.top = y + "px";
     lm.dEl.textContent = dist > 1000
@@ -689,7 +723,6 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
-  bloomPass.setSize(window.innerWidth, window.innerHeight);
   for (const l of layers) l.uniforms.uPixelRatio.value = renderer.getPixelRatio();
 });
 

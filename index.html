@@ -13,7 +13,8 @@
     --bg: #000308;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg);
+    overscroll-behavior: none; }
   body {
     font-family: "SFMono-Regular", ui-monospace, "Menlo", "Consolas", monospace;
     color: var(--hud);
@@ -21,7 +22,7 @@
     -webkit-user-select: none;
     cursor: crosshair;
   }
-  canvas { display: block; }
+  canvas { display: block; touch-action: none; }
 
   /* ---------- HUD ---------- */
   #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
@@ -48,7 +49,8 @@
   /* throttle bar */
   #throttleWrap { top: 14px; right: 14px; width: 56px; height: 260px; display: flex; flex-direction: column; align-items: center; }
   #throttleWrap .label { font-size: 10px; color: var(--hud-dim); margin-bottom: 6px; letter-spacing: 1px; }
-  #throttleBar { position: relative; flex: 1; width: 18px; border: 1px solid rgba(143,233,255,.3); border-radius: 9px; overflow: hidden; background: rgba(0,0,0,.4); }
+  #throttleBar { position: relative; flex: 1; width: 22px; border: 1px solid rgba(143,233,255,.3); border-radius: 11px; overflow: hidden; background: rgba(0,0,0,.4);
+    pointer-events: auto; cursor: ns-resize; touch-action: none; }
   #throttleFill { position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
     background: linear-gradient(0deg, #1b6f8a, #5fe6ff); transition: height .05s linear; }
   #throttleMark { position: absolute; left: -4px; right: -4px; height: 1px; background: var(--warn); bottom: 76.9%; }
@@ -118,6 +120,33 @@
   #title .go { margin-top: 18px; color: var(--hud); font-size: 14px; animation: pulse 1.6s infinite; }
   @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
   #title.hidden { opacity: 0; pointer-events: none; }
+  #title .hint-touch { display: none; }
+
+  /* interactive controls (the HUD itself is pointer-events:none) */
+  #fx-aberr, #fx-doppler, #fx-beam, #fx-contract, #effects .snd, #nav {
+    pointer-events: auto; cursor: pointer; }
+  #fx-aberr:active, #fx-doppler:active, #fx-beam:active, #fx-contract:active { color: #fff; }
+
+  /* ---- mobile / touch layout ---- */
+  @media (max-width: 640px), (pointer: coarse) {
+    .panel { padding: 8px 9px; backdrop-filter: blur(2px); }
+    #stats { min-width: 0; top: 10px; left: 10px; transform: scale(.92); transform-origin: top left; }
+    #stats .big { font-size: 19px; }
+    #stats .row { font-size: 12px; gap: 10px; }
+    /* taller, wider throttle that's easy to thumb */
+    #throttleWrap { top: 10px; right: 8px; width: 58px; height: 46vh; }
+    #throttleBar { width: 30px; }
+    /* trip computer drops to the bottom so it doesn't fight the stats panel */
+    #nav { top: auto; bottom: 10px; left: 10px; transform: none; min-width: 0; max-width: 60vw; }
+    #nav .dest { font-size: 14px; }
+    #nav .row { font-size: 11px; }
+    #effects { bottom: 10px; right: 8px; font-size: 10px; }
+    /* the keyboard cheatsheet is desktop-only */
+    #help { display: none; }
+    #toast { font-size: 16px; }
+    #title .hint-desktop { display: none; }
+    #title .hint-touch { display: block; }
+  }
 </style>
 </head>
 <body>
@@ -127,13 +156,18 @@
       <p>Fly through the galaxy at a fraction of light speed and watch the universe distort —
          aberration crowds the stars ahead, Doppler shifting bleeds them blue, and your
          clock falls behind the rest of the cosmos.</p>
-      <p style="margin-top:14px">
+      <p style="margin-top:14px" class="hint-desktop">
         <b style="color:#bfefff">Mouse</b> steer &nbsp;·&nbsp;
         <b style="color:#bfefff">W / S</b> throttle &nbsp;·&nbsp;
         <b style="color:#bfefff">Q / E</b> roll &nbsp;·&nbsp;
         <b style="color:#bfefff">Space</b> full stop
       </p>
-      <div class="go">▶ click or press any key to engage</div>
+      <p style="margin-top:14px" class="hint-touch">
+        <b style="color:#bfefff">Drag</b> the field to steer &nbsp;·&nbsp;
+        <b style="color:#bfefff">slide</b> the thrust bar &nbsp;·&nbsp;
+        <b style="color:#bfefff">tap</b> to show / hide panels
+      </p>
+      <div class="go">▶ tap or press any key to engage</div>
     </div>
   </div>
 
@@ -176,7 +210,7 @@
       <b>Mouse</b> steer (drag or move) · <b>W/S</b> throttle ± · <b>Q/E</b> roll<br/>
       <b>Shift</b> turbo thrust · <b>Space</b> full stop · <b>F</b> engage FTL warp<br/>
       <b>V</b> cycle speed preset · <b>B</b> (hold) look astern · <b>Tab</b> cycle dest<br/>
-      <b>M</b> mute · <b>G</b> glow · <b>1–4</b> toggle effects<br/>
+      <b>M</b> mute · <b>1–4</b> toggle effects<br/>
       <b>R</b> reset · <b>H</b> hide UI · <b>C</b> release/lock mouse
     </div>
 

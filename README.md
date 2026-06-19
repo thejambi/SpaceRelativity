@@ -86,9 +86,16 @@ non-physical** — real relativity diverges at `β = 1` — so FTL is rendered a
 stylized warp that collapses the starfield into the forward singularity. The HUD
 turns red and reports speed as a multiple of `c`.
 
-The forward view is rendered with an **UnrealBloom** pass and ACES filmic tone
-mapping, so bright beamed stars and the CMB hotspot get cinematic glare and roll
-off smoothly instead of blowing out to flat white.
+The forward view is rendered through an **ACES filmic tone-mapping** pass, so the
+intense forward star-pile and CMB hotspot roll off smoothly into a bright,
+structured core instead of clipping to flat white.
+
+## Touch / mobile
+
+The simulator is touch-friendly: **drag the field** to steer, **slide the thrust
+bar** to set speed, and **tap the field** to show/hide the panels. Tap individual
+rows in the *relativistic effects* panel to toggle each effect, and tap the trip
+computer to cycle its destination. The layout reflows for narrow screens.
 
 ## Layout
 
