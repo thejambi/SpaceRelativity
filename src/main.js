@@ -290,6 +290,7 @@ const audio = createAudio();
 function start() {
   if (started) return;
   started = true;
+  document.body.classList.add("started"); // reveals the HUD (hidden under title)
   titleEl.classList.add("hidden");
   setTimeout(() => (titleEl.style.display = "none"), 700);
   // Make sure an embedded iframe actually grabs keyboard focus.
@@ -389,7 +390,9 @@ function togglePointerLock() {
 
 function toggleUI() {
   uiHidden = !uiHidden;
-  document.getElementById("hud").style.display = uiHidden ? "none" : "block";
+  // CSS decides what hides: everything on desktop; on mobile the thrust bar
+  // stays (faint) so touch users keep throttle control.
+  document.body.classList.toggle("ui-hidden", uiHidden);
 }
 function resetShip() {
   ship.pos.set(0, 0, 0);

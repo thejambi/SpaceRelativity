@@ -27,6 +27,18 @@
   /* ---------- HUD ---------- */
   #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
 
+  /* keep the whole interface hidden until the user engages (title is up) */
+  body:not(.started) #hud { display: none; }
+
+  /* hide-interface toggle (H / tap): drop the panels, keep transient overlays */
+  body.ui-hidden #stats,
+  body.ui-hidden #nav,
+  body.ui-hidden #help,
+  body.ui-hidden #effects,
+  body.ui-hidden #labels,
+  body.ui-hidden #reticle,
+  body.ui-hidden #throttleWrap { display: none; }
+
   .panel {
     position: absolute;
     background: linear-gradient(180deg, rgba(8,20,28,.72), rgba(4,10,16,.62));
@@ -146,8 +158,11 @@
     #stats .big { font-size: 19px; }
     #stats .row { font-size: 12px; gap: 10px; }
     /* taller, wider throttle that's easy to thumb */
-    #throttleWrap { top: 10px; right: 8px; width: 58px; height: 46vh; }
+    #throttleWrap { top: 10px; right: 8px; width: 58px; height: 46vh; transition: opacity .25s; }
     #throttleBar { width: 30px; }
+    /* when the interface is hidden, keep the thrust bar (faint) so touch users
+       still have throttle control with everything else out of the way */
+    body.ui-hidden #throttleWrap { display: flex; opacity: 0.18; }
     /* trip computer drops to the bottom so it doesn't fight the stats panel */
     #nav { top: auto; bottom: 10px; left: 10px; transform: none; min-width: 0; max-width: 60vw; }
     #nav .dest { font-size: 14px; }
