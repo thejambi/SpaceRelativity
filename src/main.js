@@ -556,6 +556,7 @@ function flash(a) { flashAmt = Math.max(flashAmt, a); }
 // Helpers
 // ---------------------------------------------------------------------------
 const _fwd = new THREE.Vector3();
+const _prevFwd = new THREE.Vector3();
 const _up = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _dir = new THREE.Vector3();
@@ -605,10 +606,15 @@ function update(dt) {
   input.yaw += kYaw * 0.4 * dt;
   input.roll += kRoll * 0.6 * dt;
 
-  // apply rotations in ship-local space, then decay the impulse
-  _q.setFromAxisAngle(_up.set(0, 1, 0), input.yaw);
+  // Turn-rate limiter: redirecting your velocity at speed means enormous
+  // centripetal g, so yaw/pitch go heavy as gamma climbs (you physically can't
+  // whip around near c). Roll is rotation about the velocity axis — no
+  // centripetal force — so it stays free.
+  shipForward(_prevFwd);
+  const turnScale = 1 / (1 + (lorentz(ship.beta) - 1) * 0.6);
+  _q.setFromAxisAngle(_up.set(0, 1, 0), input.yaw * turnScale);
   ship.quat.multiply(_q);
-  _q.setFromAxisAngle(_right.set(1, 0, 0), input.pitch);
+  _q.setFromAxisAngle(_right.set(1, 0, 0), input.pitch * turnScale);
   ship.quat.multiply(_q);
   _q.setFromAxisAngle(_dir.set(0, 0, -1), input.roll);
   ship.quat.multiply(_q);
@@ -616,6 +622,10 @@ function update(dt) {
   input.yaw *= Math.pow(0.0001, dt);
   input.pitch *= Math.pow(0.0001, dt);
   input.roll *= Math.pow(0.0001, dt);
+
+  // how fast the heading (= velocity direction) actually swung this frame
+  shipForward(_fwd);
+  const omegaTurn = Math.acos(THREE.MathUtils.clamp(_prevFwd.dot(_fwd), -1, 1)) / Math.max(dt, 1e-4);
 
   // --- speed easing ---
   const targetBeta = throttleToBeta(Math.min(1, ship.throttle));
@@ -661,21 +671,28 @@ function update(dt) {
   // readout doesn't black the screen out during the long approach to c.
   const coordAccel = (ship.beta - dyn.prevBeta) / Math.max(dt, 1e-4);
   dyn.prevBeta = ship.beta;
-  const properAccel = coordAccel * Math.pow(gamma, 3);
-  const surge = THREE.MathUtils.clamp(Math.abs(coordAccel) / 2.2, 0, 1); // 0..1
+  const properAccel = coordAccel * Math.pow(gamma, 3);            // linear (thrust)
+  // Centripetal proper acceleration from turning: a_perp = gamma^2 * v * omega.
+  // Roll contributes nothing (it doesn't swing the heading), so this only sees
+  // yaw/pitch — turning hard near c now slams the g-meter and greys you out.
+  const turnProper = gamma * gamma * ship.beta * omegaTurn;
+  const properTotal = Math.hypot(properAccel, turnProper);
+  const surge = THREE.MathUtils.clamp(Math.abs(coordAccel) / 2.2, 0, 1);
+  const turnSurge = THREE.MathUtils.clamp(turnProper / 22, 0, 1);
+  const feltSurge = Math.max(surge, turnSurge);                  // 0..1 for visuals
 
-  const targetG = Math.min(99, Math.abs(properAccel) * 1.6);
+  const targetG = Math.min(99, properTotal * 1.6);
   dyn.gForce += (targetG - dyn.gForce) * Math.min(1, dt * 6);
 
-  // camera buffet: thrust surge + a gentle high-speed interstellar buffet
-  const targetShake = Math.min(0.016, surge * 0.012 +
+  // camera buffet: thrust/turn surge + a gentle high-speed interstellar buffet
+  const targetShake = Math.min(0.02, feltSurge * 0.013 +
                                        ship.beta * ship.beta * 0.0012 + ship.warp * 0.004);
   dyn.shake += (targetShake - dyn.shake) * Math.min(1, dt * 8);
   // FOV punch: accelerating widens the view (surge forward), braking narrows it
   const targetKick = THREE.MathUtils.clamp(coordAccel * 4.0, -6, 8);
   dyn.fovKick += (targetKick - dyn.fovKick) * Math.min(1, dt * 5);
-  // tunnel-vision veil — a vignette, never a full blackout
-  dyn.veil = Math.min(0.5, surge * 0.5 + Math.pow(ship.beta, 6) * 0.12);
+  // tunnel-vision veil — a vignette that deepens under heavy thrust or turning
+  dyn.veil = Math.min(0.6, feltSurge * 0.55 + Math.pow(ship.beta, 6) * 0.12);
 
   // --- look astern (hold B): swing the *view* 180°, velocity unchanged, so the
   // redshifted, beaming-starved rear hemisphere swings into frame ---
@@ -706,7 +723,7 @@ function update(dt) {
   updateHUD(gamma);
   updateLandmarks();
   updateTripComputer(gamma);
-  audio.update(ship.beta, Math.min(1, ship.throttle), ship.warp, surge);
+  audio.update(ship.beta, Math.min(1, ship.throttle), ship.warp, feltSurge);
 
   // g-force tunnel-vision veil
   gveilEl.style.opacity = dyn.veil.toFixed(3);

@@ -64,11 +64,16 @@ modeled as always thrusting along its nose (velocity ∥ view direction). `β = 
   out of the microwave band — a deep-red glow that whitens as you approach `c`,
   while the rear sky redshifts to black. (Honestly this needs ~0.999999c to enter
   the visible; it's nudged a little earlier here so it's reachable.)
-- **G-force** — the HUD's *thrust* readout shows proper acceleration,
-  `a = γ³·dv/dt`, the force a pilot would actually feel. It diverges as you push
-  toward `c` (why light speed is unreachable), pegging at 99 g. A camera buffet,
-  FOV punch and tunnel-vision veil sell the surge; coasting at constant speed is
-  weightless (0 g), as it should be.
+- **G-force** — the HUD's *thrust* readout shows proper acceleration, the force a
+  pilot would actually feel. Linear thrust contributes `γ³·dv/dt`; **turning**
+  contributes the centripetal term `γ²·v·ω`. Both diverge toward `c` (why light
+  speed is unreachable), pegging at 99 g, and drive a camera buffet, FOV punch and
+  tunnel-vision veil. Coasting straight is weightless (0 g). Crucially, **roll is
+  free** — it spins about the velocity axis, so it has no centripetal term — while
+  **yaw/pitch go heavy and grey you out** as you try to bend your trajectory near
+  `c`. A `γ`-based turn-rate limiter also makes steering sluggish at speed, a nod
+  to the fact that you physically cannot whip your heading around at relativistic
+  velocity without being pulped.
 
 Most of this happens per-star in a GLSL shader (`src/relativity.js`) so thousands
 of stars transform every frame. The named landmark labels run the same aberration
