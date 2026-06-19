@@ -33,7 +33,7 @@ const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.35, // strength
+  0.06,  // strength (barely-there glow — toggle with G to compare against none)
   0.25, // radius
   0.8   // threshold (only brighter-than-this pixels bloom)
 );
@@ -293,6 +293,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyF") toggleFTL();
   if (e.code === "KeyC") togglePointerLock();
   if (e.code === "KeyM") { audio.toggleMute(); updateSoundIndicator(); }
+  if (e.code === "KeyG") { bloomPass.enabled = !bloomPass.enabled; showToast("glow " + (bloomPass.enabled ? "on" : "off")); }
   if (e.code === "KeyV") cycleSpeedPreset();
   if (e.code === "Tab") { e.preventDefault(); cycleTarget(1); }
 });
