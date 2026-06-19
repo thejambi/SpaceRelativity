@@ -28,6 +28,7 @@ Then open <http://localhost:8080>.
 | **Shift** | turbo thrust (fine control is the default) |
 | **Space** | full stop |
 | **F** | engage / disengage FTL warp |
+| **V** | cycle preset speeds (rest → 0.5c → 0.9c → 0.99c → 0.9999c → rest) |
 | **B** (hold) | look astern — swing the view 180° to see the redshift |
 | **Tab** | cycle trip-computer destination |
 | **M** | mute sound · **1–4** toggle individual effects |
@@ -54,6 +55,11 @@ modeled as always thrusting along its nose (velocity ∥ view direction). `β = 
   falling behind the universe clock as `γ` climbs.
 - **Length contraction** — the forward view compresses by `1/γ` as the universe
   flattens along your direction of travel.
+- **CMB hotspot** — the 2.725 K cosmic microwave background fills the sky; your
+  motion Doppler-shifts it to `T·γ(1+β·µ)`, so a forward "hotspot" blueshifts up
+  out of the microwave band — a deep-red glow that whitens as you approach `c`,
+  while the rear sky redshifts to black. (Honestly this needs ~0.999999c to enter
+  the visible; it's nudged a little earlier here so it's reachable.)
 - **G-force** — the HUD's *thrust* readout shows proper acceleration,
   `a = γ³·dv/dt`, the force a pilot would actually feel. It diverges as you push
   toward `c` (why light speed is unreachable), pegging at 99 g. A camera buffet,
@@ -80,11 +86,17 @@ non-physical** — real relativity diverges at `β = 1` — so FTL is rendered a
 stylized warp that collapses the starfield into the forward singularity. The HUD
 turns red and reports speed as a multiple of `c`.
 
+The forward view is rendered with an **UnrealBloom** pass and ACES filmic tone
+mapping, so bright beamed stars and the CMB hotspot get cinematic glare and roll
+off smoothly instead of blowing out to flat white.
+
 ## Layout
 
 - `index.html` — HUD, controls overlay, import map.
-- `src/relativity.js` — physics helpers + the star/galaxy GLSL shaders.
-- `src/main.js` — scene, procedural starfield, ship dynamics, input, HUD.
+- `src/relativity.js` — physics helpers + the star / galaxy / CMB GLSL shaders.
+- `src/textures.js` — procedural galaxy & nebula sprite atlas.
+- `src/audio.js` — procedural Web Audio engine.
+- `src/main.js` — scene, starfield, ship dynamics, input, HUD, post-processing.
 
 Star positions, galaxies and landmarks are procedurally generated examples — the
 stellar temperature mix is roughly realistic (lots of cool red dwarfs, a few hot

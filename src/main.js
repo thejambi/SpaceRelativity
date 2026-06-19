@@ -1,8 +1,12 @@
 // main.js — Relativistic flight through a procedural universe.
 import * as THREE from "three";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import {
   C_CAP, lorentz, aberrateDir,
-  STAR_VERT, STAR_FRAG, GALAXY_VERT, GALAXY_FRAG,
+  STAR_VERT, STAR_FRAG, GALAXY_VERT, GALAXY_FRAG, CMB_VERT, CMB_FRAG,
 } from "./relativity.js";
 import { makeGalaxyAtlas } from "./textures.js";
 import { createAudio } from "./audio.js";
@@ -14,10 +18,27 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
 renderer.setClearColor(0x000206, 1);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
+// Filmic tone mapping rolls off the intense forward star-pile / CMB hotspot at
+// extreme speed into a bright structured core instead of a flat white blob.
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 100000);
+
+// Bloom post-processing — bright beamed stars and the CMB hotspot get proper
+// cinematic glare instead of being drawn as fat soft discs.
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.5,  // strength
+  0.3,  // radius
+  0.75  // threshold (only brighter-than-this pixels bloom)
+);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
 
 // ---------------------------------------------------------------------------
 // Ship state — a "magic flight" model: velocity always points along the nose.
@@ -42,6 +63,13 @@ function throttleToBeta(t) {
   t = Math.max(0, Math.min(1, t));
   return Math.min(1 - Math.pow(1 - t, 3), C_CAP);
 }
+// inverse, so a target beta can be set on the throttle
+function betaToThrottle(b) {
+  return 1 - Math.cbrt(1 - Math.min(b, C_CAP));
+}
+
+// preset cruise speeds the [V] key cycles through (wraps back to rest)
+const SPEED_PRESETS = [0, 0.5, 0.9, 0.99, 0.9999];
 
 // ---------------------------------------------------------------------------
 // Star layers
@@ -176,6 +204,23 @@ const galaxies = makeGalaxyLayer({ count: 260, cell: 1100, sizeMul: 220, scale: 
 
 const layers = [farStars, nearStars, galaxies];
 
+// --- Cosmic Microwave Background skybox (forward hotspot at high speed) ------
+const cmbUniforms = {
+  uForward: { value: new THREE.Vector3(0, 0, -1) },
+  uBeta: { value: 0 }, uGamma: { value: 1 }, uGain: { value: 0.8 },
+};
+const cmb = new THREE.Mesh(
+  new THREE.SphereGeometry(9000, 48, 32),
+  new THREE.ShaderMaterial({
+    uniforms: cmbUniforms, vertexShader: CMB_VERT, fragmentShader: CMB_FRAG,
+    side: THREE.BackSide, transparent: true, depthWrite: false, depthTest: false,
+    blending: THREE.AdditiveBlending,
+  })
+);
+cmb.frustumCulled = false;
+cmb.renderOrder = -10; // draw behind the star layers
+scene.add(cmb);
+
 // ---------------------------------------------------------------------------
 // Named landmarks (HTML labels that obey aberration too)
 // ---------------------------------------------------------------------------
@@ -248,6 +293,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyF") toggleFTL();
   if (e.code === "KeyC") togglePointerLock();
   if (e.code === "KeyM") { audio.toggleMute(); updateSoundIndicator(); }
+  if (e.code === "KeyV") cycleSpeedPreset();
   if (e.code === "Tab") { e.preventDefault(); cycleTarget(1); }
 });
 window.addEventListener("keyup", (e) => keys.delete(e.code));
@@ -296,6 +342,31 @@ function toggleFTL() {
   ship.ftl = !ship.ftl;
   flash(ship.ftl ? 0.5 : 0.2);
   audio.warpSweep(ship.ftl);
+}
+
+// Jump to the next preset speed above the current one; wrap past the top to 0.
+function cycleSpeedPreset() {
+  ship.ftl = false; ship.warp = 0;
+  // compare against the throttle target (not the eased speed) so repeated
+  // presses always advance even while the ship is still accelerating
+  const current = throttleToBeta(ship.throttle);
+  let next = SPEED_PRESETS.find((p) => p > current + 1e-4);
+  if (next === undefined) next = 0;
+  ship.throttle = betaToThrottle(next);
+  flash(0.15);
+  const pct = next === 0 ? "full stop"
+    : next >= 0.999 ? "0.9999 c" : next + " c";
+  showToast("→ " + pct);
+}
+
+let toastTimer = null;
+function showToast(text) {
+  const t = document.getElementById("toast");
+  if (!t) return;
+  t.textContent = text;
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("on"), 1100);
 }
 
 function updateSoundIndicator() {
@@ -475,6 +546,11 @@ function update(dt) {
     u.uFxDoppler.value = fx.doppler;
     u.uFxBeaming.value = fx.beaming;
   }
+  // CMB skybox tracks the observer and its Doppler-shifted hotspot
+  cmb.position.copy(ship.pos);
+  cmbUniforms.uForward.value.copy(_fwd);
+  cmbUniforms.uBeta.value = fx.doppler ? ship.beta : 0;
+  cmbUniforms.uGamma.value = gamma;
 
   // --- felt acceleration (G-force) ---
   // Coordinate accel (bounded by throttle) drives the *visuals*; proper accel
@@ -603,7 +679,7 @@ function updateLandmarks() {
 }
 
 function render() {
-  renderer.render(scene, camera);
+  composer.render();
 }
 
 // ---------------------------------------------------------------------------
@@ -611,6 +687,8 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  bloomPass.setSize(window.innerWidth, window.innerHeight);
   for (const l of layers) l.uniforms.uPixelRatio.value = renderer.getPixelRatio();
 });
 

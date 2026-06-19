@@ -95,6 +95,12 @@
     background: radial-gradient(ellipse 70% 70% at center,
       rgba(0,0,0,0) 35%, rgba(20,0,0,.55) 72%, rgba(0,0,0,.95) 100%); }
 
+  /* speed-preset toast */
+  #toast { position: absolute; top: calc(50% - 60px); left: 50%; transform: translateX(-50%);
+    font-size: 20px; letter-spacing: 2px; color: #fff; opacity: 0; transition: opacity .25s;
+    text-shadow: 0 0 14px rgba(143,233,255,.7); }
+  #toast.on { opacity: .95; }
+
   /* astern-view indicator */
   #viewmode { position: absolute; top: calc(50% + 40px); left: 50%; transform: translateX(-50%);
     font-size: 12px; letter-spacing: 3px; color: var(--warn); opacity: 0;
@@ -153,6 +159,7 @@
     </div>
 
     <div id="reticle"></div>
+    <div id="toast"></div>
     <div id="viewmode">◂ LOOKING ASTERN ▸</div>
 
     <div id="nav" class="panel">
@@ -168,7 +175,8 @@
       <div class="title">FLIGHT CONTROLS</div>
       <b>Mouse</b> steer (drag or move) · <b>W/S</b> throttle ± · <b>Q/E</b> roll<br/>
       <b>Shift</b> turbo thrust · <b>Space</b> full stop · <b>F</b> engage FTL warp<br/>
-      <b>B</b> (hold) look astern · <b>Tab</b> cycle dest · <b>M</b> mute · <b>1–4</b> effects<br/>
+      <b>V</b> cycle speed preset · <b>B</b> (hold) look astern · <b>Tab</b> cycle dest<br/>
+      <b>M</b> mute · <b>1–4</b> toggle effects<br/>
       <b>R</b> reset · <b>H</b> hide UI · <b>C</b> release/lock mouse
     </div>
 
@@ -190,7 +198,8 @@
   <script type="importmap">
   {
     "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
     }
   }
   </script>

@@ -132,8 +132,10 @@ export const STAR_VERT = /* glsl */ `
     vAlpha = clamp(aBright * fade * (0.12 + 0.88 * beam), 0.0, 1.0);
     if (uWarp > 0.0) vAlpha = min(1.0, vAlpha + uWarp * 0.15 * fade);
 
-    float sz = aSize * uSizeMul * (uScale / max(dist, 1.0)) * (0.6 + 0.4 * sqrt(beam));
-    gl_PointSize = clamp(sz * uPixelRatio, 0.6, 64.0);
+    // Keep sprites tight — the bloom pass supplies the glare for bright stars,
+    // so beaming barely grows the point instead of ballooning it into a blob.
+    float sz = aSize * uSizeMul * (uScale / max(dist, 1.0)) * (0.85 + 0.15 * sqrt(beam));
+    gl_PointSize = clamp(sz * uPixelRatio, 0.6, 24.0);
   }
 `;
 
@@ -145,10 +147,10 @@ export const STAR_FRAG = /* glsl */ `
     vec2 c = gl_PointCoord - 0.5;
     float d = length(c);
     if (d > 0.5) discard;
-    // soft round star with a hot core
-    float core = smoothstep(0.5, 0.0, d);
-    float glow = pow(core, 2.5);
-    vec3 col = mix(vColor, vec3(1.0), glow * 0.6);
+    // tight bright core with a small falloff; bloom does the rest
+    float core = smoothstep(0.5, 0.05, d);
+    float glow = pow(core, 3.0);
+    vec3 col = mix(vColor, vec3(1.0), glow * 0.7);
     gl_FragColor = vec4(col, core * vAlpha);
   }
 `;
@@ -240,5 +242,64 @@ export const GALAXY_FRAG = /* glsl */ `
     vec2 atlasUv = (vec2(tx, ty) + uv) * 0.5;
     vec3 tex = texture2D(uAtlas, atlasUv).rgb;
     gl_FragColor = vec4(tex * vTint, vAlpha);
+  }
+`;
+
+// ----------------------------------------------------------------------------
+// Cosmic Microwave Background skybox.
+// The 2.725 K CMB fills the whole sky; your motion Doppler-shifts it. Dead
+// ahead the temperature climbs to 2.725*gamma(1+beta) — at extreme speed this
+// rises into the visible as a bright forward "hotspot", while the rear redshifts
+// to black. Beaming/aberration concentrate it into a tightening forward disc.
+// ----------------------------------------------------------------------------
+
+export const CMB_VERT = /* glsl */ `
+  precision highp float;
+  varying vec3 vDir;
+  void main() {
+    vDir = normalize(position);           // sphere is centered on the observer
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+export const CMB_FRAG = /* glsl */ `
+  precision highp float;
+  uniform vec3  uForward;
+  uniform float uBeta;
+  uniform float uGamma;
+  uniform float uGain;
+  varying vec3  vDir;
+
+  vec3 blackbody(float t) {
+    t = clamp(t, 1000.0, 40000.0) / 100.0;
+    float r, g, b;
+    if (t <= 66.0) { r = 255.0; } else { r = 329.698727446 * pow(t - 60.0, -0.1332047592); }
+    if (t <= 66.0) { g = 99.4708025861 * log(t) - 161.1195681661; }
+    else { g = 288.1221695283 * pow(t - 60.0, -0.0755148492); }
+    if (t >= 66.0) { b = 255.0; }
+    else if (t <= 19.0) { b = 0.0; }
+    else { b = 138.5177312231 * log(t - 10.0) - 305.0447927307; }
+    return clamp(vec3(r, g, b) / 255.0, 0.0, 1.0);
+  }
+
+  void main() {
+    vec3 dir = normalize(vDir);
+    float mu = dot(dir, uForward);
+    float D = max(uGamma * (1.0 + uBeta * mu), 1e-4);
+    float T = 2.725 * D;
+
+    // forward concentration sharpens as you speed up (beaming + aberration)
+    float fwd = clamp(mu * 0.5 + 0.5, 0.0, 1.0);
+    float sharp = mix(2.0, 70.0, smoothstep(0.4, 1.0, uBeta));
+    float conc = pow(fwd, sharp);
+
+    // Visibility ramps with the blueshift factor (slightly exaggerated from the
+    // true ~0.999999c threshold so the effect is reachable): a deep-red forward
+    // glow by ~0.99c that whitens as the temperature climbs toward the cap.
+    float vis = smoothstep(3.0, 50.0, D);
+    float bright = uGain * conc * vis;
+
+    vec3 col = blackbody(clamp(T, 1000.0, 25000.0));
+    gl_FragColor = vec4(col * bright, 1.0);
   }
 `;
