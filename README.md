@@ -25,7 +25,7 @@ Then open <http://localhost:8080>.
 | **Mouse** (drag or locked) | steer — pitch & yaw |
 | **W / S** | throttle up / down |
 | **Q / E** | roll |
-| **Shift** | fine thrust |
+| **Shift** | turbo thrust (fine control is the default) |
 | **Space** | full stop |
 | **F** | engage / disengage FTL warp |
 | **B** (hold) | look astern — swing the view 180° to see the redshift |

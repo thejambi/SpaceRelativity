@@ -416,8 +416,9 @@ function frame(now) {
 
 function update(dt) {
   // --- throttle from keyboard ---
-  const fine = keys.has("ShiftLeft") || keys.has("ShiftRight") ? 0.25 : 1;
-  const rate = 0.55 * fine;
+  // Fine control is the default; hold Shift for a fast "turbo" burn.
+  const turbo = keys.has("ShiftLeft") || keys.has("ShiftRight") ? 4 : 1;
+  const rate = 0.14 * turbo;
   if (keys.has("KeyW") || keys.has("ArrowUp")) ship.throttle += rate * dt;
   if (keys.has("KeyS") || keys.has("ArrowDown")) ship.throttle -= rate * dt;
   if (keys.has("Space")) ship.throttle = 0;
@@ -428,8 +429,8 @@ function update(dt) {
   const kYaw = (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0) -
                (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0);
   const kRoll = (keys.has("KeyE") ? 1 : 0) - (keys.has("KeyQ") ? 1 : 0);
-  input.yaw += kYaw * 1.1 * dt;
-  input.roll += kRoll * 1.6 * dt;
+  input.yaw += kYaw * 0.7 * dt;
+  input.roll += kRoll * 0.6 * dt;
 
   // apply rotations in ship-local space, then decay the impulse
   _q.setFromAxisAngle(_up.set(0, 1, 0), input.yaw);
