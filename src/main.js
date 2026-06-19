@@ -33,9 +33,9 @@ const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.5,  // strength
-  0.3,  // radius
-  0.75  // threshold (only brighter-than-this pixels bloom)
+  0.35, // strength
+  0.25, // radius
+  0.8   // threshold (only brighter-than-this pixels bloom)
 );
 composer.addPass(bloomPass);
 composer.addPass(new OutputPass());
@@ -207,7 +207,7 @@ const layers = [farStars, nearStars, galaxies];
 // --- Cosmic Microwave Background skybox (forward hotspot at high speed) ------
 const cmbUniforms = {
   uForward: { value: new THREE.Vector3(0, 0, -1) },
-  uBeta: { value: 0 }, uGamma: { value: 1 }, uGain: { value: 0.8 },
+  uBeta: { value: 0 }, uGamma: { value: 1 }, uGain: { value: 0.5 },
 };
 const cmb = new THREE.Mesh(
   new THREE.SphereGeometry(9000, 48, 32),
