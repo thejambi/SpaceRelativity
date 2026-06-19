@@ -44,6 +44,18 @@
   #stats .big { font-size: 22px; letter-spacing: .5px; }
   #stats .big .v { color: #fff; }
   #stats hr { border: none; border-top: 1px solid rgba(143,233,255,.15); margin: 7px 0; }
+  #stats .set { display: flex; align-items: center; justify-content: space-between; gap: 10px; line-height: 1.7; font-size: 13px; }
+  #stats .set .k { color: var(--hud-dim); }
+  #stats .set input[type=range] {
+    pointer-events: auto; touch-action: none; cursor: pointer;
+    -webkit-appearance: none; appearance: none; width: 120px; height: 4px;
+    background: rgba(143,233,255,.2); border-radius: 3px; outline: none; }
+  #stats .set input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--hud); box-shadow: 0 0 6px rgba(143,233,255,.6); cursor: pointer; }
+  #stats .set input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border: none; border-radius: 50%;
+    background: var(--hud); box-shadow: 0 0 6px rgba(143,233,255,.6); cursor: pointer; }
   .ftl .v { color: var(--warn) !important; text-shadow: 0 0 8px rgba(255,106,90,.6); }
 
   /* throttle bar */
@@ -184,6 +196,9 @@
       <hr/>
       <div class="row"><span class="k">distance flown</span><span class="v" id="s-dist">0.0 ly</span></div>
       <div class="row"><span class="k">heading</span><span class="v" id="s-head">+x</span></div>
+      <hr/>
+      <div class="set"><span class="k">stars</span><input id="set-density" type="range" min="0" max="1" step="0.01" value="0.5" /></div>
+      <div class="set"><span class="k">brightness</span><input id="set-bright" type="range" min="0.15" max="1.5" step="0.01" value="1" /></div>
     </div>
 
     <div id="throttleWrap" class="panel">

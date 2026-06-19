@@ -65,6 +65,7 @@ export const STAR_VERT = /* glsl */ `
   uniform float uScale;     // perspective size scale
   uniform float uPixelRatio;
   uniform float uWarp;      // 0 = sublight, >0 = stylized FTL warp
+  uniform float uBrightness; // global brightness multiplier
   uniform float uFxAberration;
   uniform float uFxDoppler;
   uniform float uFxBeaming;
@@ -131,6 +132,7 @@ export const STAR_VERT = /* glsl */ `
     // rearward, redshifted stars visible as dim red points instead of black.
     vAlpha = clamp(aBright * fade * (0.12 + 0.88 * beam), 0.0, 1.0);
     if (uWarp > 0.0) vAlpha = min(1.0, vAlpha + uWarp * 0.15 * fade);
+    vAlpha *= uBrightness;
 
     // Keep sprites tight — the bloom pass supplies the glare for bright stars,
     // so beaming barely grows the point instead of ballooning it into a blob.
@@ -172,6 +174,7 @@ export const GALAXY_VERT = /* glsl */ `
   uniform float uScale;
   uniform float uPixelRatio;
   uniform float uWarp;
+  uniform float uBrightness;
   uniform float uFxAberration;
   uniform float uFxDoppler;
   uniform float uFxBeaming;
@@ -213,7 +216,7 @@ export const GALAXY_VERT = /* glsl */ `
 
     float beam = mix(1.0, pow(D, 3.0), uFxBeaming);
     float fade = smoothstep(uCell * 0.5, uCell * 0.1, dist);
-    vAlpha = clamp(aBright * fade * (0.4 + 0.6 * beam), 0.0, 1.0);
+    vAlpha = clamp(aBright * fade * (0.4 + 0.6 * beam), 0.0, 1.0) * uBrightness;
 
     vTile = aTile;
     vAngle = aAngle;

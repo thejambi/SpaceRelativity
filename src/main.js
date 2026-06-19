@@ -100,6 +100,7 @@ function makeStarLayer({ count, cell, tempFn, brightFn, sizeMul, scale }) {
     uScale: { value: scale },
     uPixelRatio: { value: renderer.getPixelRatio() },
     uWarp: { value: 0 },
+    uBrightness: { value: 1 },
     uFxAberration: { value: 1 },
     uFxDoppler: { value: 1 },
     uFxBeaming: { value: 1 },
@@ -116,7 +117,10 @@ function makeStarLayer({ count, cell, tempFn, brightFn, sizeMul, scale }) {
   const points = new THREE.Points(geo, mat);
   points.frustumCulled = false;
   scene.add(points);
-  return { points, uniforms };
+  // density (0..1) draws a fraction of the pool, so the field gets denser/
+  // sparser live without rebuilding the buffers
+  const setDensity = (d) => geo.setDrawRange(0, Math.floor(count * Math.max(0, Math.min(1, d))));
+  return { points, uniforms, geo, maxCount: count, setDensity };
 }
 
 // realistic-ish stellar temperature distribution (lots of cool red dwarfs,
@@ -129,8 +133,10 @@ function stellarTemp() {
   return 10000 + Math.random() * 18000;                 // B / O giants
 }
 
+// Generous pools; the density slider draws a fraction of each for a denser or
+// sparser "streaming starfield" feel.
 const nearStars = makeStarLayer({
-  count: 9000, cell: 70,
+  count: 28000, cell: 70,
   tempFn: stellarTemp,
   brightFn: () => 0.35 + Math.random() * 0.65,
   sizeMul: 2.4, scale: 26,
@@ -138,7 +144,7 @@ const nearStars = makeStarLayer({
 
 // Faint background star haze for cosmic depth between the galaxies.
 const farStars = makeStarLayer({
-  count: 2600, cell: 900,
+  count: 7000, cell: 900,
   tempFn: () => 3200 + Math.random() * 4200,
   brightFn: () => 0.08 + Math.random() * 0.25,
   sizeMul: 3.5, scale: 70,
@@ -178,7 +184,7 @@ function makeGalaxyLayer({ count, cell, sizeMul, scale }) {
     uBeta: { value: 0 }, uGamma: { value: 1 },
     uCell: { value: cell }, uSizeMul: { value: sizeMul },
     uScale: { value: scale }, uPixelRatio: { value: renderer.getPixelRatio() },
-    uWarp: { value: 0 },
+    uWarp: { value: 0 }, uBrightness: { value: 1 },
     uFxAberration: { value: 1 }, uFxDoppler: { value: 1 }, uFxBeaming: { value: 1 },
     uAtlas: { value: galaxyAtlas },
   };
@@ -196,6 +202,20 @@ function makeGalaxyLayer({ count, cell, sizeMul, scale }) {
 const galaxies = makeGalaxyLayer({ count: 260, cell: 1100, sizeMul: 220, scale: 90 });
 
 const layers = [farStars, nearStars, galaxies];
+const starLayers = [farStars, nearStars];
+
+// --- Field settings: star density & brightness ------------------------------
+const fieldSettings = { density: 0.5, brightness: 1.0 };
+function applyDensity(d) {
+  fieldSettings.density = d;
+  for (const l of starLayers) l.setDensity(d);
+}
+function applyBrightness(b) {
+  fieldSettings.brightness = b;
+  for (const l of layers) l.uniforms.uBrightness.value = b;
+}
+applyDensity(fieldSettings.density);
+applyBrightness(fieldSettings.brightness);
 
 // --- Cosmic Microwave Background skybox (forward hotspot at high speed) ------
 const cmbUniforms = {
@@ -345,6 +365,14 @@ for (const [k, id] of Object.entries(fxRows)) {
 document.querySelector("#effects .snd").addEventListener("click", () => { audio.toggleMute(); updateSoundIndicator(); });
 // Tap the NAV panel to cycle the trip-computer destination.
 document.getElementById("nav").addEventListener("click", () => cycleTarget(1));
+
+// Field-settings sliders: star density & brightness.
+const densityEl = document.getElementById("set-density");
+const brightEl = document.getElementById("set-bright");
+densityEl.value = fieldSettings.density;
+brightEl.value = fieldSettings.brightness;
+densityEl.addEventListener("input", () => applyDensity(parseFloat(densityEl.value)));
+brightEl.addEventListener("input", () => applyBrightness(parseFloat(brightEl.value)));
 document.addEventListener("pointerlockchange", () => {
   pointerLocked = document.pointerLockElement === renderer.domElement;
 });

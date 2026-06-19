@@ -34,6 +34,10 @@ Then open <http://localhost:8080>.
 | **M** | mute sound · **1–4** toggle individual effects |
 | **R** | reset · **H** hide UI · **C** lock/release mouse |
 
+The stats panel has **stars** (density) and **brightness** sliders — crank the
+density and ease the brightness down for a dense, streaming "starfield
+screensaver" feel.
+
 Throttle uses a cubic curve so the top of the bar gives you fine control in the
 last fractions of a percent below *c* — where the interesting physics lives.
 
