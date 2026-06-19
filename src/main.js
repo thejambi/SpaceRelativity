@@ -201,7 +201,6 @@ function makeGalaxyLayer({ count, cell, sizeMul, scale }) {
 const galaxies = makeGalaxyLayer({ count: 260, cell: 1100, sizeMul: 220, scale: 90 });
 
 const layers = [farStars, nearStars, galaxies];
-const starLayers = [farStars, nearStars];
 
 // --- Field settings: star density & brightness ------------------------------
 // Brightness drives the tone-mapping exposure (scales the whole image before
@@ -210,7 +209,11 @@ const starLayers = [farStars, nearStars];
 const fieldSettings = { density: 0.5, brightness: 0.85 };
 function applyDensity(d) {
   fieldSettings.density = d;
-  for (const l of starLayers) l.setDensity(d);
+  // Bias the single slider toward the near field: nearby stars fill in quickly
+  // while the distant haze ramps in slowly, so cranking it up reads as depth
+  // (more stars near than far) rather than a uniform wall.
+  nearStars.setDensity(Math.pow(d, 0.7));
+  farStars.setDensity(Math.pow(d, 1.9));
 }
 function applyBrightness(b) {
   fieldSettings.brightness = b;
