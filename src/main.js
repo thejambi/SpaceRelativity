@@ -154,14 +154,28 @@ let uiHidden = false;
 let started = false;
 
 const titleEl = document.getElementById("title");
+
+// Pointer Lock is a nice-to-have for desktop, but it's blocked in sandboxed
+// preview iframes and can reject/throw there. Never let it break startup.
+function safeRequestLock() {
+  try {
+    const p = renderer.domElement.requestPointerLock?.();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch (_) { /* pointer lock unavailable (sandboxed iframe) — fine */ }
+}
+
 function start() {
   if (started) return;
   started = true;
   titleEl.classList.add("hidden");
   setTimeout(() => (titleEl.style.display = "none"), 700);
-  renderer.domElement.requestPointerLock?.();
+  // Make sure an embedded iframe actually grabs keyboard focus.
+  try { window.focus(); } catch (_) {}
 }
-titleEl.addEventListener("click", start);
+// Start on the first interaction of ANY kind, captured before other handlers
+// so nothing can swallow it. Works even if the iframe lacked keyboard focus.
+window.addEventListener("pointerdown", () => start(), { capture: true });
+titleEl.addEventListener("click", () => start());
 
 window.addEventListener("keydown", (e) => {
   if (!started) { start(); return; }
@@ -174,7 +188,7 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("keyup", (e) => keys.delete(e.code));
 
-// Mouse steering — works both with pointer lock and as plain drag.
+// Mouse steering — works as a plain click-drag (no pointer lock required).
 let dragging = false;
 renderer.domElement.addEventListener("mousedown", () => {
   if (!started) { start(); return; }
@@ -195,7 +209,7 @@ document.addEventListener("pointerlockchange", () => {
 });
 function togglePointerLock() {
   if (pointerLocked) document.exitPointerLock();
-  else renderer.domElement.requestPointerLock?.();
+  else safeRequestLock();
 }
 
 function toggleUI() {
