@@ -429,7 +429,7 @@ function update(dt) {
   const kYaw = (keys.has("KeyA") || keys.has("ArrowLeft") ? 1 : 0) -
                (keys.has("KeyD") || keys.has("ArrowRight") ? 1 : 0);
   const kRoll = (keys.has("KeyE") ? 1 : 0) - (keys.has("KeyQ") ? 1 : 0);
-  input.yaw += kYaw * 0.7 * dt;
+  input.yaw += kYaw * 0.4 * dt;
   input.roll += kRoll * 0.6 * dt;
 
   // apply rotations in ship-local space, then decay the impulse
