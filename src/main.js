@@ -70,7 +70,7 @@ function betaToThrottle(b) {
 }
 
 // preset cruise speeds the [V] key cycles through (wraps back to rest)
-const SPEED_PRESETS = [0, 0.5, 0.9, 0.99, 0.9999];
+const SPEED_PRESETS = [0, 0.14, 0.5, 0.9, 0.99, 0.9999];
 
 // ---------------------------------------------------------------------------
 // Star layers
