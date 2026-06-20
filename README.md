@@ -32,7 +32,7 @@ Then open <http://localhost:8080>.
 | **B** (hold) | look astern — swing the view 180° to see the redshift |
 | **Tab** | cycle trip-computer destination |
 | **T** | toggle time frame (pilot ↔ universe pacing) |
-| **Z** | screensaver mode · **M** mute · **1–4** toggle individual effects |
+| **Z** | screensaver mode · **M** mute · **1–5** toggle individual effects |
 | **R** | reset · **H** hide UI · **C** lock/release mouse |
 
 The stats panel has **stars** (density) and **brightness** sliders — crank the

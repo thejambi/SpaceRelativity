@@ -374,7 +374,7 @@ throttleBarEl.addEventListener("pointermove", (e) => { if (throttleDrag) setThro
 throttleBarEl.addEventListener("pointerup", () => { throttleDrag = false; });
 
 // Tap the effect rows to toggle each relativistic effect (1–4 still work too).
-const fxRows = { aberration: "fx-aberr", doppler: "fx-doppler", beaming: "fx-beam", contraction: "fx-contract" };
+const fxRows = { aberration: "fx-aberr", doppler: "fx-doppler", beaming: "fx-beam", contraction: "fx-contract", cmb: "fx-cmb" };
 for (const [k, id] of Object.entries(fxRows)) {
   document.getElementById(id).addEventListener("click", () => { fx[k] ^= 1; });
 }
@@ -535,13 +535,14 @@ function updateTripComputer(gamma) {
   }
 }
 
-// effects toggles (number keys 1-4)
-const fx = { aberration: 1, doppler: 1, beaming: 1, contraction: 1 };
+// effects toggles (number keys 1-5)
+const fx = { aberration: 1, doppler: 1, beaming: 1, contraction: 1, cmb: 1 };
 window.addEventListener("keydown", (e) => {
   if (e.code === "Digit1") fx.aberration ^= 1;
   if (e.code === "Digit2") fx.doppler ^= 1;
   if (e.code === "Digit3") fx.beaming ^= 1;
   if (e.code === "Digit4") fx.contraction ^= 1;
+  if (e.code === "Digit5") fx.cmb ^= 1;
 });
 
 // ---------------------------------------------------------------------------
@@ -555,7 +556,7 @@ const hud = {
   throttleFill: el("throttleFill"), throttlePct: el("throttlePct"),
   statsPanel: el("stats"),
   fxAberr: el("fx-aberr"), fxDoppler: el("fx-doppler"),
-  fxBeam: el("fx-beam"), fxContract: el("fx-contract"),
+  fxBeam: el("fx-beam"), fxContract: el("fx-contract"), fxCmb: el("fx-cmb"),
 };
 
 const flashEl = document.getElementById("flash");
@@ -675,11 +676,13 @@ function update(dt) {
     u.uFxDoppler.value = fx.doppler;
     u.uFxBeaming.value = fx.beaming;
   }
-  // CMB skybox tracks the observer and its Doppler-shifted hotspot
+  // CMB skybox tracks the observer and its Doppler-shifted hotspot;
+  // fx.cmb is its own toggle (uGain 0 fully disables the layer)
   cmb.position.copy(ship.pos);
   cmbUniforms.uForward.value.copy(_fwd);
-  cmbUniforms.uBeta.value = fx.doppler ? ship.beta : 0;
+  cmbUniforms.uBeta.value = ship.beta;
   cmbUniforms.uGamma.value = gamma;
+  cmbUniforms.uGain.value = fx.cmb ? 0.5 : 0;
 
   // --- felt acceleration (G-force) ---
   // Coordinate accel (bounded by throttle) drives the *visuals*; proper accel
@@ -786,6 +789,7 @@ function updateHUD(gamma) {
   hud.fxDoppler.className = fx.doppler ? "on" : "";
   hud.fxBeam.className = fx.beaming ? "on" : "";
   hud.fxContract.className = fx.contraction ? "on" : "";
+  hud.fxCmb.className = fx.cmb ? "on" : "";
 }
 
 function updateLandmarks() {

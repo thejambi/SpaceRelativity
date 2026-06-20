@@ -147,9 +147,9 @@
   #title .hint-touch { display: none; }
 
   /* interactive controls (the HUD itself is pointer-events:none) */
-  #fx-aberr, #fx-doppler, #fx-beam, #fx-contract, #effects .snd, #nav {
+  #fx-aberr, #fx-doppler, #fx-beam, #fx-contract, #fx-cmb, #effects .snd, #nav {
     pointer-events: auto; cursor: pointer; }
-  #fx-aberr:active, #fx-doppler:active, #fx-beam:active, #fx-contract:active { color: #fff; }
+  #fx-aberr:active, #fx-doppler:active, #fx-beam:active, #fx-contract:active, #fx-cmb:active { color: #fff; }
 
   /* ---- mobile / touch layout ---- */
   @media (max-width: 640px), (pointer: coarse) {
@@ -240,7 +240,7 @@
       <b>Mouse</b> steer (drag or move) · <b>W/S</b> throttle ± · <b>Q/E</b> roll<br/>
       <b>Shift</b> turbo thrust · <b>Space</b> full stop · <b>F</b> engage FTL warp<br/>
       <b>V</b> cycle speed preset · <b>B</b> (hold) look astern · <b>Tab</b> cycle dest<br/>
-      <b>M</b> mute · <b>Z</b> screensaver · <b>T</b> time frame · <b>1–4</b> effects<br/>
+      <b>M</b> mute · <b>Z</b> screensaver · <b>T</b> time frame · <b>1–5</b> effects<br/>
       <b>R</b> reset · <b>H</b> hide UI · <b>C</b> release/lock mouse
     </div>
 
@@ -250,6 +250,7 @@
       <div id="fx-doppler">doppler shift</div>
       <div id="fx-beam">beaming</div>
       <div id="fx-contract">length contraction</div>
+      <div id="fx-cmb">CMB hotspot</div>
       <div class="snd">sound <b id="sound-state">on</b> · <b>M</b> mute</div>
     </div>
 
