@@ -130,6 +130,8 @@ computer to cycle its destination. The layout reflows for narrow screens.
 - `src/audio.js` — procedural Web Audio engine.
 - `src/main.js` — scene, starfield, ship dynamics, input, HUD, post-processing.
 
-Star positions, galaxies and landmarks are procedurally generated examples — the
+Star positions, galaxies and navigation beacons are procedurally generated — the
 stellar temperature mix is roughly realistic (lots of cool red dwarfs, a few hot
-blue giants) but positions are illustrative, not a catalog.
+blue giants), but the geography is fictional and the scale is compressed, so the
+beacon names are invented catalog designations / proper names (regenerated each
+session) rather than real stars at misleading distances.

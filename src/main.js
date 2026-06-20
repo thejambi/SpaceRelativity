@@ -248,16 +248,44 @@ cmb.renderOrder = -10; // draw behind the star layers
 scene.add(cmb);
 
 // ---------------------------------------------------------------------------
-// Named landmarks (HTML labels that obey aberration too)
+// Navigation beacons (HTML labels that obey aberration too).
+// The geography is fictional and the scale is compressed, so real star names
+// would mislead — these are procedurally generated catalog designations and
+// invented proper names, regenerated each session.
 // ---------------------------------------------------------------------------
-const landmarkDefs = [
-  { name: "Sol", pos: new THREE.Vector3(0, 0, -28) },
-  { name: "Alpha Centauri", pos: new THREE.Vector3(14, -6, -40) },
-  { name: "Sirius", pos: new THREE.Vector3(-22, 10, -55) },
-  { name: "Galactic Core / Sgr A*", pos: new THREE.Vector3(60, -20, -420) },
-  { name: "Orion Nebula", pos: new THREE.Vector3(-90, 30, -260) },
-  { name: "Andromeda (M31)", pos: new THREE.Vector3(120, 80, -780) },
-];
+const _LON = ["b", "c", "d", "g", "k", "l", "m", "n", "r", "s", "t", "v", "z",
+              "th", "dr", "kr", "tr", "br", "st", "ph", "vel", "cor"]; // first onset (clusters ok)
+const _LC = ["b", "d", "g", "k", "l", "m", "n", "r", "s", "t", "v", "z"]; // interior (single only)
+const _LV = ["a", "e", "i", "o", "u"];           // interior vowels (clean)
+const _LV1 = ["a", "e", "i", "o", "u", "ae", "ei", "ia", "au", "y"]; // first vowel (may be fancier)
+const _LEND = ["n", "r", "s", "l", "x", "th", "is", "or", "yx"];
+const _LCAT = ["HD", "HIP", "GJ", "LHS", "Wolf", "Ross", "Tycho", "Kepler", "PSR"];
+const _pick = (a) => a[(Math.random() * a.length) | 0];
+
+function beaconName() {
+  if (Math.random() < 0.5) {                       // catalog designation
+    return _pick(_LCAT) + " " + (1 + ((Math.random() * 88888) | 0));
+  }
+  let n = _pick(_LON) + _pick(_LV1);               // invented proper name (2–3 syllables)
+  const extra = Math.random() < 0.6 ? 1 : 2;
+  for (let i = 0; i < extra; i++) n += _pick(_LC) + _pick(_LV);
+  if (Math.random() < 0.45) n += _pick(_LEND);
+  n = n[0].toUpperCase() + n.slice(1);
+  if (Math.random() < 0.25) n += " " + _pick(["Major", "Minor", "Prime", "A", "B", "II"]);
+  return n;
+}
+
+const landmarkDefs = [];
+for (let i = 0; i < 8; i++) {
+  // generally forward (−z) so beacons greet you on load, with spread
+  const dir = new THREE.Vector3(
+    (Math.random() - 0.5) * 1.6,
+    (Math.random() - 0.5) * 1.1,
+    -(0.2 + Math.random() * 0.9)
+  ).normalize();
+  const dist = 25 + Math.pow(Math.random(), 1.6) * 950; // many near, a few far
+  landmarkDefs.push({ name: beaconName(), pos: dir.multiplyScalar(dist) });
+}
 const labelsRoot = document.getElementById("labels");
 for (const lm of landmarkDefs) {
   const el = document.createElement("div");
@@ -489,7 +517,9 @@ function updateSoundIndicator() {
 }
 
 // --- trip computer: proper-time vs universe-time to reach a destination ------
-let targetIndex = 3; // default: Galactic Core
+// default the trip computer to the farthest beacon — a nice long journey
+let targetIndex = landmarkDefs.reduce(
+  (best, lm, i, a) => (lm.pos.length() > a[best].pos.length() ? i : best), 0);
 function cycleTarget(d) {
   targetIndex = (targetIndex + d + landmarkDefs.length) % landmarkDefs.length;
 }
@@ -510,7 +540,7 @@ const nav = {
 function updateTripComputer(gamma) {
   const tgt = landmarkDefs[targetIndex];
   const dist = tgt.pos.distanceTo(ship.pos); // true (un-aberrated) distance, ly
-  nav.name().textContent = tgt.name.replace(/ \/.*$/, "");
+  nav.name().textContent = tgt.name;
   nav.dist().textContent = dist > 1000
     ? (dist / 1000).toFixed(2) + " kly" : dist.toFixed(1) + " ly";
 
