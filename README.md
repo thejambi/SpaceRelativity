@@ -31,7 +31,8 @@ Then open <http://localhost:8080>.
 | **V** | cycle preset speeds (rest → 0.5c → 0.9c → 0.99c → 0.9999c → rest) |
 | **B** (hold) | look astern — swing the view 180° to see the redshift |
 | **Tab** | cycle trip-computer destination |
-| **M** | mute sound · **1–4** toggle individual effects |
+| **T** | toggle time frame (pilot ↔ universe pacing) |
+| **Z** | screensaver mode · **M** mute · **1–4** toggle individual effects |
 | **R** | reset · **H** hide UI · **C** lock/release mouse |
 
 The stats panel has **stars** (density) and **brightness** sliders — crank the
@@ -87,6 +88,21 @@ blue crowding ahead.
 The **trip computer** turns the abstract physics into a gut-punch: pick a
 destination and it reports the journey in universe time (`d/βc`) versus the proper
 time you'd age aboard (`÷γ`) — e.g. *215 ly in 79 days of ship time* near `c`.
+
+### Time frame (`T`)
+
+How fast the field flies past depends on *whose clock* paces the motion:
+
+- **Pilot frame** (default) — your ship clock ticks at a steady rate, so length
+  contraction makes you cover `β·γ` light-years per year of *your* time. The field
+  rushes past faster and faster as `γ` climbs (with a soft cap so extreme `γ` is
+  thrilling, not a strobe). This is the traveler's real experience — the "cross
+  the galaxy in a lifetime" effect.
+- **Universe frame** — paced by coordinate time, so the field passes at `∝ β` and
+  saturates at `c`: what a stationary outside observer would clock you moving at.
+
+Either way the HUD stays consistent: `distance = β · universe-time` and
+`ship-time = universe-time / γ`.
 
 ### Faster than light
 

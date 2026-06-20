@@ -48,8 +48,16 @@ const ship = {
   ftl: false,
 };
 
-// simulation scale: how many sim-years pass per real second at full effects
-const TIME_SCALE = 0.6;
+// Time pacing.
+//  - "universe" frame: each real second = TIME_SCALE universe-years, so the
+//    field passes at the coordinate rate (∝ β) and saturates at c.
+//  - "pilot" frame (default): each real second = PROPER_RATE years of *your*
+//    clock, so length contraction makes the field rush past at ∝ βγ. A soft cap
+//    (GAMMA_CAP, tanh rolloff) keeps extreme γ thrilling rather than a strobe.
+const TIME_SCALE = 0.6;     // universe-frame pacing
+const PROPER_RATE = 0.5;    // pilot-frame pacing (ship-years per real second)
+const GAMMA_CAP = 40;       // soft cap on the γ speed-up
+let pilotPacing = true;     // start in the pilot's frame (the dramatic one)
 
 // throttle (0..1) -> beta, with a cubic curve giving fine control near c
 function throttleToBeta(t) {
@@ -313,6 +321,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyC") togglePointerLock();
   if (e.code === "KeyM") { audio.toggleMute(); updateSoundIndicator(); }
   if (e.code === "KeyZ") toggleScreensaver();
+  if (e.code === "KeyT") { pilotPacing = !pilotPacing; showToast(pilotPacing ? "pacing: pilot frame (γ)" : "pacing: universe frame"); }
   if (e.code === "KeyV") cycleSpeedPreset();
   if (e.code === "Tab") { e.preventDefault(); cycleTarget(1); }
 });
@@ -640,13 +649,18 @@ function update(dt) {
   ship.warp += (warpDemand - ship.warp) * Math.min(1, dt * 2);
 
   // --- integrate motion (sim units: ly & years, c = 1) ---
+  // dCoord = universe-time advanced this frame. In the pilot's frame we hold the
+  // *ship* clock's rate steady, so the universe clock (and the distance you
+  // cover) scale with γ — length contraction made real. The relationships
+  // distance = β·coordTime and shipTime = coordTime/γ stay exact either way.
   shipForward(_fwd);
+  const gPace = pilotPacing ? GAMMA_CAP * Math.tanh(gamma / GAMMA_CAP) : 1;
+  const dCoord = (pilotPacing ? PROPER_RATE : TIME_SCALE) * gPace * dt;
   const effSpeed = ship.beta + ship.warp * 6.0; // warp adds superluminal travel
-  const ds = effSpeed * TIME_SCALE * dt;        // ly this frame
+  const ds = effSpeed * dCoord;                 // ly this frame
   ship.pos.addScaledVector(_fwd, ds);
   ship.distance += ds;
 
-  const dCoord = TIME_SCALE * dt;               // universe years
   ship.coordTime += dCoord;
   ship.shipTime += dCoord / gamma;              // proper time runs slow
 
