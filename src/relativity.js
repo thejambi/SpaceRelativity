@@ -132,10 +132,10 @@ export const STAR_VERT = /* glsl */ `
     vAlpha = clamp(aBright * fade * (0.12 + 0.88 * beam), 0.0, 1.0);
     if (uWarp > 0.0) vAlpha = min(1.0, vAlpha + uWarp * 0.15 * fade);
 
-    // Keep sprites tight — the bloom pass supplies the glare for bright stars,
-    // so beaming barely grows the point instead of ballooning it into a blob.
+    // Keep sprites tight — smaller caps mean far less additive overdraw when the
+    // whole field crowds into the forward point at high speed.
     float sz = aSize * uSizeMul * (uScale / max(dist, 1.0)) * (0.85 + 0.15 * sqrt(beam));
-    gl_PointSize = clamp(sz * uPixelRatio, 0.6, 24.0);
+    gl_PointSize = clamp(sz * uPixelRatio, 0.6, 16.0);
   }
 `;
 
@@ -219,7 +219,7 @@ export const GALAXY_VERT = /* glsl */ `
     vAngle = aAngle;
 
     float sz = aSize * uSizeMul * (uScale / max(dist, 1.0));
-    gl_PointSize = clamp(sz * uPixelRatio, 1.0, 512.0);
+    gl_PointSize = clamp(sz * uPixelRatio, 1.0, 280.0); // capped to limit huge-sprite fill
   }
 `;
 

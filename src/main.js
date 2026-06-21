@@ -623,11 +623,22 @@ function headingLabel(v) {
 // Main loop
 // ---------------------------------------------------------------------------
 let last = performance.now();
+let preStartRenders = 0;
+let backdropDirty = true; // request a (re)paint of the static title backdrop
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  if (started) update(dt);
-  render();
+  if (started) {
+    update(dt);
+    render();
+  } else if (backdropDirty || preStartRenders < 3) {
+    // Paint the static intro backdrop a few times (covers async texture upload),
+    // then idle the GPU until the user engages — re-rendering a still frame every
+    // tick is pure waste. (The rAF loop keeps spinning; only render() is skipped.)
+    render();
+    preStartRenders++;
+    backdropDirty = false;
+  }
   requestAnimationFrame(frame);
 }
 
@@ -863,6 +874,7 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
   for (const l of layers) l.uniforms.uPixelRatio.value = renderer.getPixelRatio();
+  backdropDirty = true; // repaint the static backdrop at the new size if idle
 });
 
 requestAnimationFrame(frame);
