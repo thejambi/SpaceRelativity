@@ -77,7 +77,6 @@
     pointer-events: auto; cursor: ns-resize; touch-action: none; }
   #throttleFill { position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
     background: linear-gradient(0deg, #1b6f8a, #5fe6ff); transition: height .05s linear; }
-  #throttleMark { position: absolute; left: -4px; right: -4px; height: 1px; background: var(--warn); bottom: 76.9%; }
   #throttleWrap .pct { font-size: 11px; margin-top: 6px; color: var(--hud); }
 
   /* compass / reticle */
@@ -218,7 +217,7 @@
 
     <div id="throttleWrap" class="panel">
       <div class="label">THRUST</div>
-      <div id="throttleBar"><div id="throttleFill"></div><div id="throttleMark" title="c"></div></div>
+      <div id="throttleBar"><div id="throttleFill"></div></div>
       <div class="pct" id="throttlePct">0%</div>
     </div>
 
