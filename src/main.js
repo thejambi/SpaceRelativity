@@ -474,36 +474,20 @@ function showToast(text) {
   toastTimer = setTimeout(() => t.classList.remove("on"), 1100);
 }
 
-// set a slider's value and apply it together (keeps the thumb in sync)
-function setBrightnessUI(b) {
-  applyBrightness(b);
-  const e = document.getElementById("set-bright"); if (e) e.value = b;
-}
-function setDensityUI(d) {
-  applyDensity(d);
-  const e = document.getElementById("set-density"); if (e) e.value = d;
-}
-
-// Screensaver mode: a calm, beaming-free drift with a dimmer, denser field.
-// Toggles on/off, restoring your prior settings when you exit.
-const SCREENSAVER = { brightness: 0.6, density: 0.75, beta: 0.5 };
+// Screensaver mode: switch off every relativistic effect and cruise at 0.99c —
+// a clean "fly through the starfield" look with no distortion. Toggles on/off,
+// restoring your previous effect toggles and speed when you exit.
+const SCREENSAVER_BETA = 0.99;
 let screensaverPrev = null;
 function toggleScreensaver() {
   if (!screensaverPrev) {
-    screensaverPrev = {
-      beaming: fx.beaming, brightness: fieldSettings.brightness,
-      density: fieldSettings.density, throttle: ship.throttle, ftl: ship.ftl,
-    };
-    fx.beaming = 0;
-    setBrightnessUI(SCREENSAVER.brightness);
-    setDensityUI(SCREENSAVER.density);
+    screensaverPrev = { fx: { ...fx }, throttle: ship.throttle, ftl: ship.ftl };
+    fx.aberration = fx.doppler = fx.beaming = fx.contraction = fx.cmb = 0;
     ship.ftl = false; ship.warp = 0;
-    ship.throttle = betaToThrottle(SCREENSAVER.beta);
+    ship.throttle = betaToThrottle(SCREENSAVER_BETA);
     showToast("screensaver ✦");
   } else {
-    fx.beaming = screensaverPrev.beaming;
-    setBrightnessUI(screensaverPrev.brightness);
-    setDensityUI(screensaverPrev.density);
+    Object.assign(fx, screensaverPrev.fx);
     ship.ftl = screensaverPrev.ftl; ship.warp = 0;
     ship.throttle = screensaverPrev.throttle;
     screensaverPrev = null;

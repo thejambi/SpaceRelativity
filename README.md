@@ -35,9 +35,11 @@ Then open <http://localhost:8080>.
 | **Z** | screensaver mode · **M** mute · **1–5** toggle individual effects |
 | **R** | reset · **H** hide UI · **C** lock/release mouse |
 
-The stats panel has **stars** (density) and **brightness** sliders — crank the
-density and ease the brightness down for a dense, streaming "starfield
-screensaver" feel.
+Press **Z** for **screensaver mode** — it switches off every relativistic effect
+and cruises at 0.99c, giving a clean, undistorted "fly through the starfield"
+look. Press **Z** again to restore your previous effect toggles and speed. (The
+stats panel's **stars** density and **brightness** sliders let you tune the field
+to taste.)
 
 Throttle uses a cubic curve so the top of the bar gives you fine control in the
 last fractions of a percent below *c* — where the interesting physics lives.
