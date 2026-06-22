@@ -115,6 +115,44 @@ The forward view is rendered through an **ACES filmic tone-mapping** pass, so th
 intense forward star-pile and CMB hotspot roll off smoothly into a bright,
 structured core instead of clipping to flat white.
 
+### What's *not* physical
+
+The transformations above — aberration, Doppler/temperature shift, time dilation,
+and the two G-force terms — are the genuine special-relativity formulas. But this
+is a flat-spacetime *special*-relativity toy, so plenty is simplified, stylized,
+or simply absent:
+
+**Deliberate presentation tweaks**
+
+- **Length contraction is shown as an FOV squeeze — which isn't how it would
+  actually look.** Light-travel-time delays make a fast object appear *rotated*,
+  not flattened (the Terrell–Penrose effect). The aberration already does the
+  legitimate visual warping; the FOV squeeze is just an evocative stand-in.
+- **CMB hotspot** glows well below its true ~0.999999c threshold so it's reachable.
+- **Beaming** uses `D³`; the bolometric point-source result is closer to `D⁴`, and
+  a small brightness floor keeps rearward stars visible as dim red points instead
+  of vanishing as hard as they really would.
+- The `βγ` **pacing** has a soft cap, the **G-meter** is scaled and clamped at 99 g,
+  and **FTL** is non-physical (above).
+
+**Genuine omissions**
+
+- **No light-travel-time / retardation.** Stars are transformed at their *current*
+  positions, not where they were when their light left — so the real Terrell
+  rotation never appears.
+- **No spectral band-shifting.** Extreme blueshift should push optical stars into
+  the UV (vanishing) and pull formerly-infrared sources into view; we just recolor
+  and clamp the blackbody, so the forward field never changes population.
+- **No gravity / general relativity at all** — no gravitational lensing, no
+  gravitational time dilation, no black holes. Pure special relativity in flat
+  spacetime.
+- **Non-Newtonian flight.** Your velocity always follows your nose. In real space,
+  rotating your ship doesn't change your trajectory — you'd keep coasting the old
+  way until you burned laterally (at enormous fuel cost).
+- **Compressed, fictional geography.** The starfield wraps infinitely (the same
+  stars recur) and beacon distances are tiny vs. reality. Galaxies are flat
+  sprites, stars have no proper motion, and — of course — there's no sound in space.
+
 ## Touch / mobile
 
 The simulator is touch-friendly: **drag the field** to steer, **slide the thrust
