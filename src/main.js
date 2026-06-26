@@ -206,7 +206,7 @@ function makeGalaxyLayer({ count, cell, sizeMul, scale }) {
   return { points, uniforms };
 }
 
-const galaxies = makeGalaxyLayer({ count: 260, cell: 1100, sizeMul: 220, scale: 90 });
+const galaxies = makeGalaxyLayer({ count: 110, cell: 1100, sizeMul: 220, scale: 90 });
 
 const layers = [farStars, nearStars, galaxies];
 
